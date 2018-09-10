@@ -1,0 +1,99 @@
+<?php
+namespace models;
+use \strawframework\base\Model;
+/**
+ * Auto generate by AGA v{{version}}
+ * Generate at: {{time}}
+ */
+
+class {{name}} extends Model{
+
+    //如 model 名同数据表名 ， 并且无需设置表前缀 数据库也使用 config 默认配置，则无需重写 父类的 __construct 方法
+    public function __construct() {
+        parent::__construct($table = '{{tableName}}', $pre = null, $dbtag = '{{dbtag}}');
+    }
+
+    //本 model 中所有可用字段 和 类型
+    public static $_COLUMNS = [{{fields}}];
+
+    /**
+     *  通过主键获取一条数据
+     *  $pk {{pkField}} 值
+     *  $filed 获取该字段值 为空时取全部字段
+     */
+    public function getInfoViaPk($pk, $filed = ''){
+        //需要查询的字段不在数据表中
+        if ($filed && !in_array($filed, array_keys(self::$_COLUMNS)))
+            $filed = '';
+
+        $this->_field = '{{pkField}}';
+        $this->_value = $pk;
+        return $filed ? $this->$filed : $this->_ALL_;
+    }
+
+    /**
+     *  根据条件获取一条数据信息
+     *  $field 查询字段
+     *  $value 查询字段值
+     */
+    public function getInfo($field, $value){
+        //需要查询的字段不在数据表中
+        if (!in_array($field, array_keys(self::$_COLUMNS)))
+            return false;
+
+        return $this->query([$field => $value])->cache(true)->getOne();
+    }
+
+    /**
+     *  获取一条数据信息
+     *  $page 当前页码 为 NULL时后面参数均无效 直接查询所有结果集
+     *  $order 排序规则
+     *  $count 取值量
+     */
+    public function getList($page = NULL, $order = '', $count = 10){
+        //增加条件查询
+        // http://118.178.228.190:88/index.php?title=StrawFramework#.E9.80.9A.E7.94.A8.E8.A7.A3.E9.87.8A
+        $query = '';
+
+        //当 page 为 NULL 时查询全部列表
+        if (NULL == $page){
+            return $this->query($query)->order($order)->cache(true)->getAll();
+        }else{
+            //当前条件总量
+            $total = $this->query($query)->cache(true)->count('{{pkField}}');
+            //page偏移量
+            $offset = $page * $count - $count;
+            $list = $this->query($query)->order($order)->offset($offset)->limit($count)->cache(true)->getAll();
+            // total 为最数据
+            // list 为结果集数组
+            return [
+                'list' => $list,
+                'total' => $total
+            ];
+        }
+    }
+
+    /**
+     *  通过主键更新数据
+     *  $data 根据更新的数据数组
+     *  $pk {{pkField}} 值
+     */
+    public function modify($data, $pk){
+        return $this->update($data, ['{{pkField}}' => $pk]);
+    }
+
+    /**
+     *  通过主键删除数据
+     *  $pk {{pkField}} 值
+     */
+    public function remove($pk){
+        return $this->delete(['{{pkField}}' => $pk]);
+    }
+
+    /**
+     *  新增一条数据
+     */
+    public function newData($data){
+        return $this->insert($data);
+    }
+}
