@@ -74,22 +74,7 @@ class Controller extends Straw {
         $this->_Gset['site_domain'] = parent::$config['config']['site_domain'];
         //本 module name
         $this->_Gset['module_name'] = parent::$config['config']['module_name'];
-//        foreach ($this->_availableModules as $key => $value) {
-//            $this->_availableModules[$key] = parent::$config['module_protocol'][$key].'://'.$value.'.'.$this->_Gset['site_domain'];
-//        }
-//        //为module 添加 域名
-//        function walkModules(&$item, $key, $params){
-//            $item = $params['moduleProtocol'][$key].'://'.$item.'.'.$params['siteDomain'];
-//        };
-//        array_walk($this->_availableModules, 'walkModules', [
-//            'siteDomain'     => $this->_Gset['site_domain'],
-//            'moduleProtocol' => parent::$config['module_protocol']
-//        ]);
-//        print_r($this->_availableModules);die;
-        /*
-         * $this->_available
-         * Array ( [main] => //www.blackrock.local [passport] => //passport.blackrock.local [straw] => //straw.blackrock.local )
-         */
+
 
         //是否加载模板
         if (TRUE == $isView) {
