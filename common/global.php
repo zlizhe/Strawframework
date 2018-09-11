@@ -96,7 +96,7 @@ spl_autoload_register(function (string $class): void {
     if (!in_array($namespacePath, array_keys($classPath)))
         ex(sprintf('%s path not availiable!', $class), '', '系统错误');
 
-    $fileName = $classPath[$namespacePath] . ucfirst($cname) . '.php';
+    $fileName = $classPath[$namespacePath] . lcfirst($cname) . '.php';
     // echo $fileName;
     // echo "<br/>";
     if (is_file($fileName)) {
