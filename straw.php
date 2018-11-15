@@ -1,11 +1,12 @@
 <?php
 namespace strawframework;
+use strawframework\factory\RequestFactory;
+
 /**
  *  straw framework base class
- *  2018.8.28
- *  Zack Lee
+ *  2018.11
+ *  Strawberry Team
  *
- *  zlizhe.com
  */
 class Straw {
 
@@ -117,7 +118,6 @@ class Straw {
         }
 
         $cname = "\controllers\\" . lcfirst($c);
-        $obj = new $cname();
         $reflection = new \ReflectionClass($cname);
         $methods = $reflection->getMethods(\ReflectionMethod::IS_PUBLIC);
 
@@ -138,9 +138,8 @@ class Straw {
             ex(sprintf("Router error, can not found uri %s", $a));
 
         //真实的 action name
-        $a = $requestDocs[$a][$rMethod]['name'];
-        
-        //@todo 拦截 get post put delete 
+        $doAction = $requestDocs[$a][$rMethod]['name'];
+        RequestFactory::factory($a, $rMethod)->setRequest();
 
         // if (!method_exists($obj, $a)) {
         //     // __call 映射
@@ -151,7 +150,7 @@ class Straw {
         //     }
         // }
 
-        $obj->$a();
+        $res = (new $cname())->$doAction();
     }
 
     /**

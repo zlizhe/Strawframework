@@ -8,6 +8,13 @@ use \strawframework\Straw;
  *  base CONTROLLER  
  */
 class Controller extends Straw {
+
+    /**
+     * 当前参数列表
+     * @var null
+     */
+    protected $params = null;
+
     /**
      * 当前版本号
      * @var string

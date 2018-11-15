@@ -66,8 +66,8 @@ define('IS_AJAX', ((isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SER
 // 系统函数
 include(BASE_PATH . 'functions.php');
 
-if (file_exists(PROTECTED_PATH . 'functions.php')) // 用户函数
-    include(PROTECTED_PATH . 'functions.php');
+//if (file_exists(PROTECTED_PATH . 'functions.php')) // 用户函数
+//    include(PROTECTED_PATH . 'functions.php');
 
 include(LIBRARY_PATH . 'straw.php');
 
@@ -86,9 +86,11 @@ spl_autoload_register(function (string $class): void {
         'strawframework\\db' => LIBRARY_PATH . 'db' . DS, 
         'strawframework\\vendors' => VENDORS_PATH,
         'strawframework\\protocol' => LIBRARY_PATH . 'protocol' . DS,
+        'strawframework\\factory' => LIBRARY_PATH . 'factory' . DS,
         'controllers' => CONTROLLERS_PATH,
         'models' => MODELS_PATH,
         'views' => TEMPLATES_PATH,
+        'requests' => PROTECTED_PATH . 'requests' . DS,
     ];
     $cname = end(explode('\\', $class));
     $namespacePath = str_replace('\\' . $cname, '', $class);

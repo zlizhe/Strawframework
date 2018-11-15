@@ -11,3 +11,18 @@ Wiki (https://github.com/zlizhe/strawframework/wiki)
 > Mysql 5.5 +
 
 > Mongodb 3.x +
+
+# Router
+
+Extends Controller
+
+@Request(uri='/article', target='get')
+
+> 支持 get post put delete
+
+
+# Rest 
+
+http://www.runoob.com/w3cnote/restful-architecture.html
+
+http://www.ruanyifeng.com/blog/2018/10/restful-api-best-practices.html
