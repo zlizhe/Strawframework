@@ -62,7 +62,7 @@ class Controller extends Straw {
         parent::__construct();
 
         //当前程序版本
-        $this->_Gver = version();
+        $this->_Gver = '';//@todo version();
 
         //read from config
         $this->_availableModules = parent::$config['modules'];

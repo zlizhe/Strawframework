@@ -32,7 +32,7 @@ class Straw {
      * @return string
      */
     public static function version() : string {
-        return '2.0';
+        return '3.0';
     }
 
     //读取 site config from json file
@@ -112,14 +112,37 @@ class Straw {
 
         $cname = "\controllers\\" . lcfirst($c);
         $obj = new $cname();
-        if (!method_exists($obj, $a)) {
-            // __call 映射
-            if (!method_exists($obj, '_call')) {
-                ex($a . ' Action Not Found!');
-            } else {
-                $a = '_call';
+        $reflection = new \ReflectionClass($cname);
+        $methods = $reflection->getMethods(\ReflectionMethod::IS_PUBLIC);
+
+        $requestDocs = [];
+        foreach($methods as $key => $method){
+            //方法的注释
+            $requestDoc = $method->getDocComment();
+            preg_match('/@Request\s*\(uri=[\'|\"]\/?(.*)[\'|\"]\s*,\s*target=[\'|\"](get|post|put|delete)[\'|\"]\)/i', $requestDoc, $requestRouter);  
+            list($requet, $action, $target) = $requestRouter;
+            if (!empty($action) && !empty($target)){
+                $requestDocs[$action]['name'] = $method->getName();
+                $requestDocs[$action]['target'] = $target;
             }
         }
+
+        if (!in_array($a, array_keys($requestDocs)))
+            ex(sprintf("Router error, can not found uri %s", $a));
+
+        //真实的 action name
+        $a = $requestDocs[$a]['name'];
+        
+        //@todo 拦截 get post put delete 
+
+        // if (!method_exists($obj, $a)) {
+        //     // __call 映射
+        //     if (!method_exists($obj, '_call')) {
+        //         ex($a . ' Action Not Found!');
+        //     } else {
+        //         $a = '_call';
+        //     }
+        // }
 
         $obj->$a();
     }
