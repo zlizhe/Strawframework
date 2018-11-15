@@ -75,9 +75,15 @@ class Straw {
         }
     }
 
+    //允许的方法
+    const AVAILABLE_METHODS = ['get', 'post', 'put', 'delete'];
 
     //入口
     public function run(): void {
+        $rMethod = strtolower($_SERVER['REQUEST_METHOD']);
+        if (!in_array($rMethod, self::AVAILABLE_METHODS))
+            ex(sprintf("%s method not invalid.", $rMethod));
+        
 
         //如果启用 path_info
         if (strtolower(self::$config['config']['router']) == 'path_info') {
@@ -119,11 +125,12 @@ class Straw {
         foreach($methods as $key => $method){
             //方法的注释
             $requestDoc = $method->getDocComment();
-            preg_match('/@Request\s*\(uri=[\'|\"]\/?(.*)[\'|\"]\s*,\s*target=[\'|\"](get|post|put|delete)[\'|\"]\)/i', $requestDoc, $requestRouter);  
+            preg_match('/@Request\s*\(uri=[\'|\"]\/?(.*)[\'|\"]\s*,\s*target=[\'|\"]('.implode('|', self::AVAILABLE_METHODS).')[\'|\"]\)/i', $requestDoc, $requestRouter);  
             list($requet, $action, $target) = $requestRouter;
             if (!empty($action) && !empty($target)){
-                $requestDocs[$action]['name'] = $method->getName();
-                $requestDocs[$action]['target'] = $target;
+                $requestDocs[$action][$target] = [
+                    'name' => $method->getName(),
+                ];
             }
         }
 
@@ -131,7 +138,7 @@ class Straw {
             ex(sprintf("Router error, can not found uri %s", $a));
 
         //真实的 action name
-        $a = $requestDocs[$a]['name'];
+        $a = $requestDocs[$a][$rMethod]['name'];
         
         //@todo 拦截 get post put delete 
 
