@@ -29,7 +29,7 @@ class RequestFactory{
         $class = 'requests\\' . $request;
 
         $reflection = new \ReflectionClass($class);
-        $methods = $reflection->getProperties(\ReflectionMethod::IS_PRIVATE);
+        $methods = $reflection->getProperties(\ReflectionMethod::IS_PROTECTED);
 
         $requestDocs = [];
         foreach($methods as $key => $method){

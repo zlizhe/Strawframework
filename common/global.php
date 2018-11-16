@@ -39,13 +39,8 @@ define("PROTECTED_PATH", ROOT_PATH . 'protected' . DS);
 define("LIBRARY_PATH", ROOT_PATH . 'strawframework' . DS);
 //公共方法目录
 //define("COMMON_PATH", PROTECTED_PATH.'common'.DS);
-//base
-define("BASE_PATH", LIBRARY_PATH . 'base' . DS);
 //静态资源目录
 define("PUBLIC_PATH", ROOT_PATH . 'public' . DS);
-//base mvc
-define("CONTROLLERS_PATH", PROTECTED_PATH . 'controllers' . DS);
-define("MODELS_PATH", PROTECTED_PATH . 'models' . DS);
 //模板路径
 define("TEMPLATES_PATH", PUBLIC_PATH . 'templates' . DS);
 //第三方扩展目录
@@ -64,7 +59,7 @@ define('IS_DELETE', REQUEST_METHOD == 'DELETE' ? TRUE : FALSE);
 define('IS_AJAX', ((isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest')) ? TRUE : FALSE);
 
 // 系统函数
-include(BASE_PATH . 'functions.php');
+include(LIBRARY_PATH . 'base' . DS . 'functions.php');
 
 //if (file_exists(PROTECTED_PATH . 'functions.php')) // 用户函数
 //    include(PROTECTED_PATH . 'functions.php');
@@ -81,22 +76,29 @@ spl_autoload_register(function (string $class): void {
 
     //可用的 namespace Path
     $classPath = [
-        'strawframework\\base' => BASE_PATH,
+        'strawframework\\base' => LIBRARY_PATH . 'base' . DS,
         'strawframework\\cache' => LIBRARY_PATH . 'cache' . DS,
         'strawframework\\db' => LIBRARY_PATH . 'db' . DS, 
         'strawframework\\vendors' => VENDORS_PATH,
         'strawframework\\protocol' => LIBRARY_PATH . 'protocol' . DS,
         'strawframework\\factory' => LIBRARY_PATH . 'factory' . DS,
-        'controllers' => CONTROLLERS_PATH,
-        'models' => MODELS_PATH,
+        'controllers' => PROTECTED_PATH . 'controllers' . DS,
+        'models' => PROTECTED_PATH . 'models' . DS,
         'views' => TEMPLATES_PATH,
         'requests' => PROTECTED_PATH . 'requests' . DS,
     ];
     $cname = end(explode('\\', $class));
     $namespacePath = str_replace('\\' . $cname, '', $class);
 
+    //Controller 增加 version 
+    if ('controller' == substr($namespacePath, 0, strlen('controller'))){
+        $classPath[$namespacePath] = $classPath['controllers'] . end(explode('\\', $namespacePath)) . DS;
+        // $namespacePath = 'controller';
+    }
+
+    // var_dump($classPath, $namespacePath);
     if (!in_array($namespacePath, array_keys($classPath)))
-        ex(sprintf('%s path not availiable!', $class), '', '系统错误');
+        ex(sprintf('Load %s class failed!', $class), '', '系统错误');
 
     $fileName = $classPath[$namespacePath] . lcfirst($cname) . '.php';
     // echo $fileName;

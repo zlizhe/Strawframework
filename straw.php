@@ -81,43 +81,30 @@ class Straw {
 
     //入口
     public function run(): void {
-        $rMethod = strtolower($_SERVER['REQUEST_METHOD']);
+        $rMethod = strtolower(REQUEST_METHOD);
         if (!in_array($rMethod, self::AVAILABLE_METHODS))
             ex(sprintf("%s method not invalid.", $rMethod));
         
 
-        //如果启用 path_info
-        if (strtolower(self::$config['config']['router']) == 'path_info') {
-            $this->router();
-            //default controller
-            if (empty($_GET[0]) || $_GET[0] == 'index.php') {
-                $_GET[0] = SCRIPT_NAME;
-            }
+        $_GET['_URI_'] = explode('/', key($_GET));
 
-            //default action
-            if (empty($_GET[1])) {
-                $_GET[1] = 'index';
-            }
-
-            $c = $_GET[0];
-            $a = $_GET[1];
-        } else {
-            //默认方式
-            //controller
-            $c = $_GET['c'] ?: 'index';
-            //action
-            $a = $_GET['a'] ?: 'index';
-        }
+        //version
+        $v = lcfirst($_GET['_URI_'][0]) ?? 'v1';
+        //controller
+        $c = $_GET['_URI_'][1] ?? 'index';
+        //router
+        $a = $_GET['_URI_'][2] ?? 'index';
+        unset($_GET[key($_GET)], $_GET['_URI_']);
 
         //设置当前  controller action name
         $this->setControllerActionName($c, $a);
 
-        $file = CONTROLLERS_PATH . $c . '.php';
+        $file = PROTECTED_PATH . 'controllers' . DS . $v . DS . $c . '.php';
         if (!file_exists($file)) {
             ex($c . ' Class Not Found!');
         }
 
-        $cname = "\controllers\\" . lcfirst($c);
+        $cname = sprintf("controllers\\%s\\%s", $v, lcfirst($c));
         $reflection = new \ReflectionClass($cname);
         $methods = $reflection->getMethods(\ReflectionMethod::IS_PUBLIC);
 
@@ -165,121 +152,5 @@ class Straw {
         define("ACTION_NAME", $a);
     }
 
-    //路由
-    private function router(): void {
-        if (PHP_SAPI === 'cli') {
-            // Command line requires a bit of hacking
-            if (isset($_SERVER['argv'][1])) {
-                $current_uri = $_SERVER['argv'][1];
-
-                // Remove GET string from segments
-                if (($query = strpos($current_uri, '?')) !== FALSE) {
-                    list($current_uri, $query) = explode('?', $current_uri, 2);
-
-                    // Parse the query string into $_GET
-                    parse_str($query, $_GET);
-                }
-            }
-        } elseif (current($_GET) === '' && substr($_SERVER['QUERY_STRING'], -1) !== '=') {
-            // The URI is the array key, eg: ?this/is/the/uri
-            $current_uri = key($_GET);
-            // Remove the URI from $_GET
-            unset($_GET[$current_uri]);
-            // Remove the URI from $_SERVER['QUERY_STRING']
-            $_SERVER['QUERY_STRING'] = ltrim(substr($_SERVER['QUERY_STRING'], strlen($current_uri)), '/&');
-        } elseif (isset($_SERVER['REQUEST_URI']) && $_SERVER['REQUEST_URI']) {
-            //去掉后面的query_string
-            $current_uri = strstr($_SERVER['REQUEST_URI'], '?', TRUE);
-        } elseif (isset($_SERVER['ORIG_PATH_INFO']) && $_SERVER['ORIG_PATH_INFO']) {
-            $current_uri = $_SERVER['ORIG_PATH_INFO'];
-        } elseif (isset($_SERVER['PHP_SELF']) && $_SERVER['PHP_SELF']) {
-            $current_uri = $_SERVER['PHP_SELF'];
-        }
-
-        $current_uri = preg_replace('#\.[\s./]*/#', '', $current_uri);
-
-        $current_uri = trim($current_uri, '/');
-
-        $segments = explode('/', $current_uri);
-        $spc = defined('RPARAM_CHR') ? RPARAM_CHR : '-';
-        //支持以'/'作为参数分隔符,第一个和第二个参数固定,分别表示controller和action
-        if ($spc == '/') {
-            for ($i = 0, $plen = count($segments); $i < $plen; $i++) {
-                if ($i < 2) {
-                    $_GET[$i] = $segments[$i];
-                } else {
-                    $_GET[$segments[$i]] = $segments[++$i];
-                }
-            }
-        } else {
-            $ri = 0;
-            foreach ($segments as $key => $val) {
-                if ($val !== '') {
-                    //取参数
-                    if (strpos($val, $spc) !== FALSE) {
-                        list($kk, $vv) = explode($spc, $val, 2);
-                        $_REQUEST[$kk] = $_GET[$kk] = urldecode(trim($vv));
-                    } else {
-                        $_GET[$ri++] = $val;
-                    }
-                }
-            }
-        }
-    }
-
-    //生成可用的 url
-    public static function createUrl($ca, $param = []) {
-        if (!$ca) {
-            return FALSE;
-        }
-
-        list($c, $a) = explode('/', $ca);
-        if ($param && !is_array($param)) {
-            return FALSE;
-        }
-
-        $params = '';
-        //array to string
-        if ($param) {
-            foreach ($param as $key => $value) {
-                $params .= '&' . addslashes($key) . '=' . addslashes($value);
-            }
-        }
-        unset($param);
-
-        if (strtolower(self::$config['config']['router']) == 'path_info') {
-            //pathinfo 地址
-            $url = '';
-//            if ($module)
-//                $url .= '/' . addslashes($module);
-            if ($c) {
-                $url .= '/' . addslashes($c);
-            }
-            if ($a) {
-                $url .= '/' . addslashes($a);
-            }
-            if ($params) {
-                $url .= '?' . substr($params, 1, -1);
-            }
-
-            return $url;
-        } else {
-            //普通地址
-            $url = '/index.php';
-            if ($c) {
-                $url .= '?c=' . addslashes($c);
-                if ($a) {
-                    $url .= '&a=' . addslashes($a);
-                }
-//                if ($module)
-//                    $url .= '&m='.addslashes($module);
-                if ($params) {
-                    $url .= substr($params, 1, -1);
-                }
-            }
-
-            return $url;
-        }
-    }
 }
 
