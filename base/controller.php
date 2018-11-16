@@ -11,9 +11,8 @@ class Controller extends Straw {
 
     /**
      * 当前参数列表
-     * @var null
      */
-    protected $params = null;
+    private $params;
 
     /**
      * 当前版本号
@@ -107,6 +106,21 @@ class Controller extends Straw {
         //if (parent::$config['config']['sign_key'] && parent::$config['config']['rsa_sign']){
         //    define('SIGN_KEY', strtolower(parent::$config['config']['sign_key']));
         //}
+    }
+
+    /**
+     * 设置请求参数 来源于 Request
+     */
+    public function setParams(Request $params): Controller{
+        $this->params = $params;
+        return $this;
+    }
+
+    /**
+     * 返回当前请求的参数 Request object
+     */
+    public function getParams(): Request{
+        return $this->params;
     }
 
     //为本会话生成新的 csrf token

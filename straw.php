@@ -126,7 +126,7 @@ class Straw {
 
         //真实的 action name
         $doAction = $requestDocs[$a][$rMethod]['name'];
-        RequestFactory::factory($a, $rMethod)->setRequest();
+        $requestObj = RequestFactory::factory($a, $rMethod)->getRequest();
 
         // if (!method_exists($obj, $a)) {
         //     // __call 映射
@@ -137,7 +137,7 @@ class Straw {
         //     }
         // }
 
-        $res = (new $cname())->$doAction();
+        $res = (new $cname())->setParams($requestObj)->$doAction();
     }
 
     /**

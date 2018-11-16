@@ -25,9 +25,23 @@ abstract class Request{
         return ['trim'];
     }
 
-    public function __get($key){
+    public function __get($reqName){
 
-        echo $key;
+        //getField
+        if (0 == strpos(strtolower($reqName), 'get')) {
+            $name = substr($reqName, 3);
+            $propertyName = lcfirst($name);
+            if (!property_exists($this, $propertyName)){
+                throw new \Exception(sprintf('Method not found %s', $name));
+            }else{
+                if (method_exists($this, $reqName)){
+                    return $this->{$reqName}();
+                }else{
+                    return $this->{$propertyName};
+                }
+
+            }
+        }
     }
 
     //当前用于 uri 的 path /controller/action  | /version/controller/action
@@ -134,13 +148,12 @@ abstract class Request{
     // }
 
     /**
-     * 写入参数列
+     * 返回当前 Request object
      * @param string $method
      *
      * @throws \Exception
      */
-    public function setRequest(){
-
-
+    public function getRequest(){
+        return $this;
     }
 }
