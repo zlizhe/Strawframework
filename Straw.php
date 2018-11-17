@@ -91,9 +91,9 @@ class Straw {
         //version
         $v = $_GET['_URI_'][0] ?? 'v1';
         //controller
-        $c = $_GET['_URI_'][1] ?? 'index';
+        $c = ucfirst($_GET['_URI_'][1]) ?? 'Home';
         //router
-        $a = $_GET['_URI_'][2] ?? 'index';
+        $a = lcfirst($_GET['_URI_'][2]) ?? 'main';
         unset($_GET[key($_GET)], $_GET['_URI_']);
 
         //设置当前  controller action name
@@ -104,7 +104,7 @@ class Straw {
             ex($c . ' Class Not Found!');
         }
 
-        $cname = sprintf("Controllers\\%s\\%s", $v, ucfirst($c));
+        $cname = sprintf("Controllers\\%s\\%s", $v, $c);
         $reflection = new \ReflectionClass($cname);
         $methods = $reflection->getMethods(\ReflectionMethod::IS_PUBLIC);
 
