@@ -1,1 +1,1 @@
-[Strawframework Wiki](https://github.com/zlizhe/strawframework/wiki)
+[Strawframework Wiki](https://github.com/zlizhe/Strawframework/wiki)
