@@ -10,10 +10,10 @@ namespace Strawframework\Base;
 
 /**
  * 请求对象
- * Class Request
+ * Class RequestObject
  * @package strawframework\base
  */
-abstract class Request{
+abstract class RequestObject{
 
     //请求可用的类型
     const AVAILABLE_TYPE = ['int', 'string', 'array'];
@@ -48,7 +48,34 @@ abstract class Request{
     //当前用于 uri 的 path /controller/action  | /version/controller/action
     // const URI_PATHS = [0, 1];
 
-    public function __construct(string $method, array $requests) {
+    public function __construct() {
+
+        //return $this;
+    }
+
+    private static $requiredColumns = null;
+
+    /**
+     * 设置必填项目检查
+     * @param array|null $columns
+     *
+     * @return $this
+     */
+    public function setRequired(?array $columns = []){
+
+        self::$requiredColumns = count($columns) > 0 ? $columns : null;
+        return $this;
+    }
+
+    /**
+     * 写入 Requests 传值
+     * @param string $method
+     * @param array  $requests
+     *
+     * @return $this
+     * @throws \Exception
+     */
+    public function setRequests(string $method, array $requests){
         //最终取值
         $params = [];
         switch ($method) {
@@ -67,12 +94,20 @@ abstract class Request{
                 $params = array_merge($_GET, $params);
                 break;
             default:
-                throw new \Exception('Request not invalid');
+                throw new \Exception('Request method not invalid');
         }
         unset($_REQUEST);
-        foreach ($requests as $key => $request) {
-            $tmpValue = $params[$request['name']];
-            if ($tmpValue){
+        foreach ($this as $key => $column) {
+            $tmpValue = $params[$requests[$key]['name']];
+        //}
+        //foreach ($requests as $key => $request) {
+        //    $tmpValue = $params[$request['name']];
+            //必填检查
+            if (self::$requiredColumns && in_array($key, self::$requiredColumns)){
+                if (empty($tmpValue) && '0' != $tmpValue)
+                    throw new \Exception(sprintf('Column %s can not be null.', $requests[$key]['name']));
+            }
+            if (!empty($tmpValue) || '0' == $tmpValue){
                 $setFilter = 'set' . ucfirst($key);
                 //自定义过滤器
                 if (method_exists($this, $setFilter)){
@@ -84,10 +119,10 @@ abstract class Request{
                 }
                 //类型检查
                 try{
-                    $tmpValue = Request::convert($tmpValue, $request['type']);
+                    $tmpValue = RequestObject::convert($tmpValue, $requests[$key]['type']);
                 }catch (\TypeError $e){
                     //value type error
-                    throw new \Exception(sprintf('Request %s type must be %s.', $request['name'], $request['type']));
+                    throw new \Exception(sprintf('Request %s type must be %s.', $requests[$key]['name'], $requests[$key]['type']));
                 }
                 $this->{$key} = $tmpValue;
             }
@@ -156,9 +191,8 @@ abstract class Request{
 
     /**
      * 返回当前 Request object
-     * @param string $method
      *
-     * @throws \Exception
+     * @return $this
      */
     public function getRequest(){
         return $this;

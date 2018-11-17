@@ -76,6 +76,7 @@ class Straw {
         }
     }
 
+
     //允许的方法
     const AVAILABLE_METHODS = ['get', 'post', 'put', 'delete'];
 
@@ -83,65 +84,71 @@ class Straw {
     public function run(): void {
         $rMethod = strtolower(REQUEST_METHOD);
         if (!in_array($rMethod, self::AVAILABLE_METHODS))
-            ex(sprintf("%s method not invalid.", $rMethod));
+            throw new \Exception(sprintf("%s method not invalid.", $rMethod));
         
 
         $_GET['_URI_'] = explode('/', key($_GET));
 
         //version
-        $v = $_GET['_URI_'][0] ?? 'v1';
+        $v = $_GET['_URI_'][0] ?: 'v1';
         //controller
-        $c = ucfirst($_GET['_URI_'][1]) ?? 'Home';
+        $c = ucfirst($_GET['_URI_'][1]) ?: 'Home';
         //router
-        $a = lcfirst($_GET['_URI_'][2]) ?? 'main';
+        $a = lcfirst($_GET['_URI_'][2]) ?: '/';
         unset($_GET[key($_GET)], $_GET['_URI_']);
 
-        //设置当前  controller action name
-        $this->setControllerActionName($c, $a);
-
-        $file = PROTECTED_PATH . 'Controllers' . DS . $v . DS . $c . '.php';
+        $file = PROTECTED_PATH . 'Controller' . DS . $v . DS . $c . '.php';
         if (!file_exists($file)) {
-            ex($c . ' Class Not Found!');
+            throw new \Exception(sprintf('Class %s not found.', $c));
         }
 
-        $cname = sprintf("Controllers\\%s\\%s", $v, $c);
+        $cname = sprintf("Controller\\%s\\%s", $v, $c);
         $reflection = new \ReflectionClass($cname);
+        $classDoc = $reflection->getDocComment();
+        preg_match('/@Ro\s*\(name=[\'|\"](\w+)[\'|\"]\)/i', $classDoc, $roArr);
+        $ro = $roArr[1];
+        //Controller 类必须有 Ro
+        if (empty($ro))
+            throw new \Exception(sprintf('The router %s Request Object can not found, or Ro config invalid in controller.', $a));
         $methods = $reflection->getMethods(\ReflectionMethod::IS_PUBLIC);
 
+        //匹配整个类
         $requestDocs = [];
         foreach($methods as $key => $method){
             //方法的注释
             $requestDoc = $method->getDocComment();
-            preg_match('/@Request\s*\(uri=[\'|\"]\/?(.*)[\'|\"]\s*,\s*target=[\'|\"]('.implode('|', self::AVAILABLE_METHODS).')[\'|\"]\)/i', $requestDoc, $requestRouter);  
+            preg_match('/@Request\s*\(uri=[\'|\"](\/?[\w|-]*)[\'|\"]\s*,\s*target=[\'|\"]('.implode('|', self::AVAILABLE_METHODS).')[\'|\"]\)/i', $requestDoc, $requestRouter);
+            preg_match('/@Required\s*\(column=[\'|\"]([\w|-|\s|,]+)[\'|\"]\)/i', $requestDoc, $requiredArr);
             list($requet, $action, $target) = $requestRouter;
+            //有路由的配置
             if (!empty($action) && !empty($target)){
                 $requestDocs[$action][$target] = [
                     'name' => $method->getName(),
                 ];
             }
+            //必填项目需要
+            if (!empty($requiredArr[1]))
+                $requestDocs[$action][$target]['required'] = array_map('trim', explode(',', $requiredArr[1]));
         }
 
-        if (!in_array($a, array_keys($requestDocs)))
-            ex(sprintf("Router error, can not found uri %s", $a));
+        if (false == $requestDocs[$a][$rMethod])
+            throw new \Exception(sprintf("Router error, can not found uri %s.", $a));
+
+        //设置当前  controller action name
+        $this->setControllerActionName($c, $a);
+
+        //set requests
+        $requestObj = RequestFactory::factory($v, $ro, $requestDocs[$a][$rMethod]['required'], $rMethod)->getRequest();
 
         //真实的 action name
         $doAction = $requestDocs[$a][$rMethod]['name'];
-        $requestObj = RequestFactory::factory($a, $rMethod)->getRequest();
-
-        // if (!method_exists($obj, $a)) {
-        //     // __call 映射
-        //     if (!method_exists($obj, '_call')) {
-        //         ex($a . ' Action Not Found!');
-        //     } else {
-        //         $a = '_call';
-        //     }
-        // }
-
-        $res = (new $cname())->setRequests($requestObj)->$doAction();
+        (new $cname())->setRequests($requestObj)->$doAction();
     }
 
     /**
      *  根据  router 设置当前的 controller action name 常量
+     * @param string $c
+     * @param string $a
      */
     private function setControllerActionName(string $c, string $a): void {
         if (!$c || !$a) {

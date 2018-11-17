@@ -8,7 +8,7 @@ namespace Strawframework\Factory;
  * Time: 15:24
  */
 
-use Strawframework\Base\Request;
+use Strawframework\Base\RequestObject;
 
 /** Request
  * Class RequestFactory
@@ -24,9 +24,9 @@ class RequestFactory{
      * @return mixed
      * @throws \Exception
      */
-    public static function factory(string $request, string $fromMethod){
+    public static function factory(string $v, string $request, ? array $required, string $fromMethod){
 
-        $class = 'Requests\\' . $request;
+        $class = sprintf('Ro\\%s\\%s', $v, ucfirst($request));
 
         $reflection = new \ReflectionClass($class);
         $methods = $reflection->getProperties(\ReflectionMethod::IS_PROTECTED);
@@ -36,7 +36,7 @@ class RequestFactory{
             //方法的注释
             //@todo 缓存已知类
             $requestDoc = $method->getDocComment();
-            preg_match('/@Column\s*\(name=[\'|\"](.*)[\'|\"]\s*,\s*type=[\'|\"]('.implode('|', Request::AVAILABLE_TYPE).')[\'|\"]\)/i', $requestDoc, $requestRouter);
+            preg_match('/@Column\s*\(name=[\'|\"](.*)[\'|\"]\s*,\s*type=[\'|\"]('.implode('|', RequestObject::AVAILABLE_TYPE).')[\'|\"]\)/i', $requestDoc, $requestRouter);
 
             //参数 名称 / 类型
             list($requet, $name, $type) = $requestRouter;
@@ -47,7 +47,7 @@ class RequestFactory{
             }
         }
 
-        return new $class($fromMethod, $requestDocs);
+        return (new $class())->setRequired($required)->setRequests($fromMethod, $requestDocs);
     }
 
 }

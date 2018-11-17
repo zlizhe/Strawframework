@@ -1,5 +1,9 @@
 # StrawFramework
 
+> Version 3.0
+
+增加 Request Object Data View Object Service Logic 层
+
 > Version 2.0
 
 php 7.2 / mysql 8.0 / mongodb 4.0 / namespace 支持计划

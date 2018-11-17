@@ -43,18 +43,7 @@ function compress_html($string) {
     return preg_replace($pattern, $replace, $string);
 }
 
-function checkFileNameViaWin($fileName) {
-    //win平台检查一下 大小写是否一致
-    if (TRUE == APP_DEBUG) {
-        if (basename(realpath($fileName)) != basename($fileName)) {
-            return FALSE;
-        } else {
-            return TRUE;
-        }
-    }
 
-    return TRUE;
-}
 
 
 //异常

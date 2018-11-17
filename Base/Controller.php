@@ -111,7 +111,7 @@ class Controller extends Straw {
     /**
      * 设置请求参数 来源于 Request
      */
-    public function setRequests(Request $requests): Controller{
+    public function setRequests(RequestObject $requests): Controller{
         $this->requests = $requests;
         return $this;
     }
@@ -119,7 +119,7 @@ class Controller extends Straw {
     /**
      * 返回当前请求的参数 Request object
      */
-    public function getRequests(): Request{
+    public function getRequests(): RequestObject{
         return $this->requests;
     }
 
