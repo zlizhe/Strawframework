@@ -58,7 +58,7 @@ Wiki (https://github.com/zlizhe/strawframework/wiki)
 @Request(uri='/article', target='get')
 ```
 
-[必填] 最终访问 URL GET */version/controller/article*
+**必填** 最终访问 URL GET */version/controller/article*
 
 > 支持 get post put delete
 
@@ -66,15 +66,20 @@ Wiki (https://github.com/zlizhe/strawframework/wiki)
 @Required(column='id,title')
 ```
 
-[可选] 本访问必填字段申明, 逗号分割多个字段, 字段为 **Ro 处申明的名称非实际传入字段名** (非常重要, 允许字段名如下划线分割 Ro 字段名驼峰法表示, 在这里必须使用 Ro 字段名)
+**可选** 本访问必填字段申明, 逗号分割多个字段, 字段名应为 **Ro 处申明的名称, 非实际传入字段名** (非常重要, 如字段名下划线分割(first_name) Ro 字段名驼峰法表示(firstName), 在这里必须使用 Ro 字段名(firstName) 来申明为必填字段)
 
-* 获取传入值 Ro
+### 获取传入值 Ro
 
 ```
-$this->getRequests()
+$this->getRequests(); //含有所有可用并已传入值的 Request Object 
 ```
 
-为所有已传入值的 Request Object 可使用 getColumnName() 方法获取每个字段值(仅 Controller 内获取)
+```
+$this->getRequests()->getColumnName(); //指定名称获取每个字段值
+$this->getRequests()->getFirstName(); //获取上例中的 first_name 传入字段
+```
+>仅 Controller 内可获取
+
 
 ## Ro (Request Object)
 
@@ -87,3 +92,57 @@ $this->getRequests()
 ```
 @Column (name='id', type='int')
 ```
+
+## Error 拦截器
+
+创建任意 Error 拦截器 于 Protected/Error/, 每个 Error 拦截器可定义一个 Error code (11), 每个错误可以定义一个 Error code (01), 最终的错误显示 code 为 1101, 为区分不同业务的来源应为不同业务(Controller)创建不同的 Error 拦截器
+
+Error 需要继承 \Strawframework\Base\Error
+
+```
+protected $code = '11';
+```
+$code 为当前业务的 Error code, code = 10 为 Strawframework 保留 code
+
+```
+//占位符 => 错误码
+protected $errorCode = [
+    'ID_INVALID' => '01'
+];
+```
+
+申明 $errorCode 对应错误占位符 与 错误码
+
+```
+public function __construct(string ...$msgKeyAndValue) {
+    //第二个参数为语言包 
+    parent::__construct($msgKeyAndValue, 'ArticleError');
+}
+```
+
+> 调用父类方法时传入语言包名称, 加载语言包 Protected/Lang/VERSION/LANG/ArticleError.php
+
+### 调用方法
+
+```
+throw new \Error\Article('ID_INVALID', 'id'); //ID_INVALID 为占位符应在 ArticleError -> $errorCode 与 语言包 ArticleError 中存在
+```
+
+### 其他异常
+```
+throw new Strawframework\Base\Error(ERROR_MSG); //该方法抛出 Strawframework 内部的可显示异常或错误
+
+throw new \Exception(ERROR_MSG); //该方法抛出系统错误的异常(若要使用户看见信息请使用上一个方法), 在生产环境不显示详细信息, 请勿传入第二参数
+```
+
+## 语言包 (未全部完成)
+
+语言包与配置文件一样，创建于 Protected/Lang/VERSION/LANG/ArticleError.php
+
+```
+return [
+    'ID_INVALID' => 'Article id %s invalid.',
+];
+```
+
+直接 Return 数组, key 为占位符, value 为该语言(LANG)消息内容, 可继续含有占位符。如(%s, %d)
