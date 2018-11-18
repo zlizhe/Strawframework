@@ -5,16 +5,15 @@ use Strawframework\Straw;
 
 final class Main{
 
-    private static $mainInstance;
+    private static $me;
     /**
-     * 获取 Main
-     * @return Main
+     * 获取
      */
     public static function getInstance(){
-        if (!self::$mainInstance)
-            self::$mainInstance = new self();
+        if (!self::$me)
+            self::$me = new self();
 
-        return self::$mainInstance;
+        return self::$me;
     }
 
     //默认 ENV 生产环境
@@ -95,44 +94,24 @@ final class Main{
         //header("Access-Control-Allow-Credentials: true");
         //unset($siteDomain);
         spl_autoload_register(function (string $class): void {
-            // echo $class;
-            // echo '_____';
-
-            //可用的 namespace Path
-            $classPath = [
-                'Controller' => PROTECTED_PATH . 'Controller' . DS,
-                //'Models' => PROTECTED_PATH . 'Models' . DS,
-                //'Views' => TEMPLATES_PATH,
-                'Ro' => PROTECTED_PATH . 'Ro' . DS,
-                'Strawframework\\Base' => LIBRARY_PATH . 'Base' . DS,
-                'Strawframework\\Cache' => LIBRARY_PATH . 'Cache' . DS,
-                'Strawframework\\Db' => LIBRARY_PATH . 'Db' . DS,
-                'Strawframework\\Vendors' => LIBRARY_PATH . 'Vendors'. DS,
-                'Strawframework\\Protocol' => LIBRARY_PATH . 'Protocol' . DS,
-                'Strawframework\\Factory' => LIBRARY_PATH . 'Factory' . DS,
-            ];
-            $classArr = explode('\\', $class);
-            $cname = end($classArr);
-            $namespacePath = str_replace('\\' . $cname, '', $class);
-
-
-            //support version in url /v1/controller/router
-            if (in_array($classArr[0], ['Controller', 'Ro'])){
-                $classPath[$namespacePath] = $classPath[$classArr[0]] . $classArr[1] . DS;
-            }
-
-            // var_dump($classPath, $namespacePath);
-            if (!in_array($namespacePath, array_keys($classPath)))
-                throw new \Exception(sprintf('Load %s class failed!', $class));
-
-            $fileName = $classPath[$namespacePath] . ucfirst($cname) . '.php';
              //echo $fileName;
              //echo "<br/>";
-            Main::import($fileName);
+            Main::import($class, [
+                'Controller', 'Error', 'Lang', 'Result', 'Ro'
+            ]);
         });
 
         //throw error 错误统一处理
         set_exception_handler(function($exception){
+            // System \Exception 不显示具体错误信息
+            //if (0 == $exception->getCode()){
+            //
+            //}else{
+            //
+            //}
+            //
+            //echo "<pre>";
+            //print_r($exception->getCode());die;
             ex($exception);
         });
         session_start();
@@ -141,14 +120,30 @@ final class Main{
         return new $boot();
     }
 
-
     /**
      * 导入包
-     * @param string $fileName
+     * @param string $class
+     * @param array  $availablePath
      *
      * @throws \Exception
      */
-    public static function import(string $fileName): void{
+    public static function import(string $class, $availablePath = []): void{
+        $classArr = explode('\\', $class);
+        $cname = end($classArr);
+        array_pop($classArr); //pop Controller name
+        //Library path
+        if ('Strawframework' == current($classArr)){
+            array_shift($classArr); //首个元素 Strawframework
+            $path = LIBRARY_PATH . implode(DS, $classArr);
+        }else{
+            //设置白名单 非名单的不加载
+            if (!empty($availablePath) && !in_array(current($classArr), $availablePath))
+                throw new \Exception(sprintf('Can not load class %s.', $class));
+            //Protected path
+            $path = PROTECTED_PATH . implode(DS, $classArr);
+        }
+
+        $fileName = $path . DS . ucfirst($cname) . '.php';
 
         if (is_file($fileName)) {
             //win平台检查一下 大小写是否一致

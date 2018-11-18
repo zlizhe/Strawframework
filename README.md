@@ -31,11 +31,11 @@ Wiki (https://github.com/zlizhe/strawframework/wiki)
 
 - [ ] Mysql ORM
 
-- [ ] Mongodb Libray
+- [ ] Mongodb Library
 
 - [ ] Data View Object
 
-- [ ] Input Ouput 分别支持 JSON TEXT XML 支持配置
+- [ ] Input Output 分别支持 JSON TEXT XML 支持配置
 
 
 ## Router Controller

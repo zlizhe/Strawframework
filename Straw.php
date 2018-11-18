@@ -141,7 +141,7 @@ class Straw {
             }
 
             //设置当前  controller action name
-            $this->setControllerActionName($c, $a);
+            $this->setDefineName($c, $a, $v);
 
             //set requests
             $requestObj = RequestFactory::factory($v, $ro, $requestDocs[$a][$rMethod]['required'], $rMethod)->getRequest();
@@ -160,13 +160,17 @@ class Straw {
      * @param string $c
      * @param string $a
      */
-    private function setControllerActionName(string $c, string $a): void {
+    private function setDefineName(string $c, string $a, string $v): void {
         if (!$c || !$a) {
             return;
         }
 
-        define("CONTROLLER_NAME", $c);
-        define("ACTION_NAME", $a);
+        if (!defined("CONTROLLER_NAME"))
+            define("CONTROLLER_NAME", $c);
+        if (!defined("ACTION_NAME"))
+            define("ACTION_NAME", $a);
+        if (!defined("VERSION_NAME"))
+            define("VERSION_NAME", $v);
     }
 
 }
