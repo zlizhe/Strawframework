@@ -13,7 +13,7 @@ namespace Strawframework\Base;
  * Class RequestObject
  * @package strawframework\base
  */
-abstract class RequestObject{
+class RequestObject{
 
     //请求可用的类型
     const AVAILABLE_TYPE = ['int', 'string', 'array'];

@@ -17,18 +17,14 @@ final class Main{
         return self::$mainInstance;
     }
 
-    private $appEnv;
+    //默认 ENV 生产环境
+    private $appEnv = 'PRODUCTION';
 
     public function setEnv(string $appEnv): Main{
         if (!$appEnv)
             throw new \Exception('APP ENV must be set.');
 
         $this->appEnv = $appEnv;
-        return $this;
-    }
-
-    //configure Strawframework
-    public function configure() : Straw {
 
         //生产环境 关闭 debug
         if ('PRODUCTION' == strtoupper($this->appEnv)) {
@@ -36,6 +32,11 @@ final class Main{
         } else {
             define('APP_DEBUG', TRUE);
         }
+        return $this;
+    }
+
+    //configure Strawframework
+    public function configure(string $boot) : Straw {
 
         if (TRUE == APP_DEBUG) {
             error_reporting(E_ERROR | E_WARNING | E_PARSE);
@@ -75,12 +76,12 @@ final class Main{
         //runtime
         define('RUNTIME_PATH', PROTECTED_PATH . 'Runtime' . DS);
 
-        define('REQUEST_METHOD', $_SERVER['REQUEST_METHOD']);
-        define('IS_GET', REQUEST_METHOD == 'GET' ? TRUE : FALSE);
-        define('IS_POST', REQUEST_METHOD == 'POST' ? TRUE : FALSE);
-        define('IS_PUT', REQUEST_METHOD == 'PUT' ? TRUE : FALSE);
-        define('IS_DELETE', REQUEST_METHOD == 'DELETE' ? TRUE : FALSE);
-        define('IS_AJAX', ((isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest')) ? TRUE : FALSE);
+        //define('REQUEST_METHOD', $_SERVER['REQUEST_METHOD']);
+        //define('IS_GET', REQUEST_METHOD == 'GET' ? TRUE : FALSE);
+        //define('IS_POST', REQUEST_METHOD == 'POST' ? TRUE : FALSE);
+        //define('IS_PUT', REQUEST_METHOD == 'PUT' ? TRUE : FALSE);
+        //define('IS_DELETE', REQUEST_METHOD == 'DELETE' ? TRUE : FALSE);
+        //define('IS_AJAX', ((isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest')) ? TRUE : FALSE);
 
         // 系统函数
         include(LIBRARY_PATH . 'Base' . DS . 'functions.php');
@@ -99,16 +100,16 @@ final class Main{
 
             //可用的 namespace Path
             $classPath = [
+                'Controller' => PROTECTED_PATH . 'Controller' . DS,
+                //'Models' => PROTECTED_PATH . 'Models' . DS,
+                //'Views' => TEMPLATES_PATH,
+                'Ro' => PROTECTED_PATH . 'Ro' . DS,
                 'Strawframework\\Base' => LIBRARY_PATH . 'Base' . DS,
                 'Strawframework\\Cache' => LIBRARY_PATH . 'Cache' . DS,
                 'Strawframework\\Db' => LIBRARY_PATH . 'Db' . DS,
                 'Strawframework\\Vendors' => LIBRARY_PATH . 'Vendors'. DS,
                 'Strawframework\\Protocol' => LIBRARY_PATH . 'Protocol' . DS,
                 'Strawframework\\Factory' => LIBRARY_PATH . 'Factory' . DS,
-                'Controller' => PROTECTED_PATH . 'Controller' . DS,
-                //'Models' => PROTECTED_PATH . 'Models' . DS,
-                //'Views' => TEMPLATES_PATH,
-                'Ro' => PROTECTED_PATH . 'Ro' . DS,
             ];
             $classArr = explode('\\', $class);
             $cname = end($classArr);
@@ -136,7 +137,8 @@ final class Main{
         });
         session_start();
 
-        return new Straw();
+        $boot = "\\Strawframework\\" . $boot;
+        return new $boot();
     }
 
 

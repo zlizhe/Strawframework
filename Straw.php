@@ -82,7 +82,7 @@ class Straw {
 
     //入口
     public function run(): void {
-        $rMethod = strtolower(REQUEST_METHOD);
+        $rMethod = strtolower($_SERVER['REQUEST_METHOD']);
         if (!in_array($rMethod, self::AVAILABLE_METHODS))
             throw new \Exception(sprintf("%s method not invalid.", $rMethod));
         
@@ -97,6 +97,10 @@ class Straw {
         $a = lcfirst($_GET['_URI_'][2]) ?: '/';
         unset($_GET[key($_GET)], $_GET['_URI_']);
 
+        //version = v0 is test
+        if ('v0' == $v && FALSE == APP_DEBUG)
+            throw new \Exception('This version just run on DEVELOPMENT environment.');
+
         $file = PROTECTED_PATH . 'Controller' . DS . $v . DS . $c . '.php';
         if (!file_exists($file)) {
             throw new \Exception(sprintf('Class %s not found.', $c));
@@ -107,42 +111,48 @@ class Straw {
         $classDoc = $reflection->getDocComment();
         preg_match('/@Ro\s*\(name=[\'|\"](\w+)[\'|\"]\)/i', $classDoc, $roArr);
         $ro = $roArr[1];
-        //Controller 类必须有 Ro
-        if (empty($ro))
-            throw new \Exception(sprintf('The router %s Request Object can not found, or Ro config invalid in controller.', $a));
-        $methods = $reflection->getMethods(\ReflectionMethod::IS_PUBLIC);
+        //Controller 有 Ro
+        if (!empty($ro)) {
+            //throw new \Exception(sprintf('The router %s Request Object can not found, or Ro config invalid in controller.', $a));
+            $methods = $reflection->getMethods(\ReflectionMethod::IS_PUBLIC);
 
-        //匹配整个类
-        $requestDocs = [];
-        foreach($methods as $key => $method){
-            //方法的注释
-            $requestDoc = $method->getDocComment();
-            preg_match('/@Request\s*\(uri=[\'|\"](\/?[\w|-]*)[\'|\"]\s*,\s*target=[\'|\"]('.implode('|', self::AVAILABLE_METHODS).')[\'|\"]\)/i', $requestDoc, $requestRouter);
-            preg_match('/@Required\s*\(column=[\'|\"]([\w|-|\s|,]+)[\'|\"]\)/i', $requestDoc, $requiredArr);
-            list($requet, $action, $target) = $requestRouter;
-            //有路由的配置
-            if (!empty($action) && !empty($target)){
-                $requestDocs[$action][$target] = [
-                    'name' => $method->getName(),
-                ];
+            //匹配整个类
+            $requestDocs = [];
+            foreach ($methods as $key => $method) {
+                //方法的注释
+                $requestDoc = $method->getDocComment();
+                preg_match('/@Request\s*\(uri=[\'|\"](\/?[\w|-]*)[\'|\"]\s*,\s*target=[\'|\"](' . implode('|', self::AVAILABLE_METHODS) . ')[\'|\"]\)/i', $requestDoc, $requestRouter);
+                preg_match('/@Required\s*\(column=[\'|\"]([\w|-|\s|,]+)[\'|\"]\)/i', $requestDoc, $requiredArr);
+                list($requet, $action, $target) = $requestRouter;
+                //有路由的配置
+                if (!empty($action) && !empty($target)) {
+                    $requestDocs[$action][$target] = [
+                        'name' => $method->getName(),
+                    ];
+                }
+                //必填项目需要
+                if (!empty($requiredArr[1])) {
+                    $requestDocs[$action][$target]['required'] = array_map('trim', explode(',', $requiredArr[1]));
+                }
             }
-            //必填项目需要
-            if (!empty($requiredArr[1]))
-                $requestDocs[$action][$target]['required'] = array_map('trim', explode(',', $requiredArr[1]));
+
+            if (FALSE == $requestDocs[$a][$rMethod]) {
+                throw new \Exception(sprintf("Router error, can not found uri %s.", $a));
+            }
+
+            //设置当前  controller action name
+            $this->setControllerActionName($c, $a);
+
+            //set requests
+            $requestObj = RequestFactory::factory($v, $ro, $requestDocs[$a][$rMethod]['required'], $rMethod)->getRequest();
+            //真实的 action name
+            $doAction = $requestDocs[$a][$rMethod]['name'];
+        }else{
+            //没有 Ro 的 Controller 走 Aciton name
+            $doAction = $a;
         }
 
-        if (false == $requestDocs[$a][$rMethod])
-            throw new \Exception(sprintf("Router error, can not found uri %s.", $a));
-
-        //设置当前  controller action name
-        $this->setControllerActionName($c, $a);
-
-        //set requests
-        $requestObj = RequestFactory::factory($v, $ro, $requestDocs[$a][$rMethod]['required'], $rMethod)->getRequest();
-
-        //真实的 action name
-        $doAction = $requestDocs[$a][$rMethod]['name'];
-        (new $cname())->setRequests($requestObj)->$doAction();
+        (new $cname())->setRequests($requestObj ?? null)->$doAction();
     }
 
     /**
