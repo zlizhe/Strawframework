@@ -50,7 +50,7 @@ final class Main{
     public function configure(string $boot) : Straw {
 
         //生产环境 关闭 debug
-        if ('PRODUCTION' == strtoupper($_ENV['APP_ENV'])) {
+        if ($this->appEnv == strtoupper($_ENV['APP_ENV'])) {
             define('APP_DEBUG', FALSE);
         } else {
             define('APP_DEBUG', TRUE);
