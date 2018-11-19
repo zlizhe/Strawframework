@@ -1,10 +1,5 @@
 <?php
 namespace Strawframework\Base;
-/**
- * User: Zack Lee
- * Date: 2018/11/18
- * Time: 14:28
- */
 
 /**
  * 异常处理
@@ -29,7 +24,7 @@ class Error extends \Exception {
 
         //不使用语言包
         if (!$lang){
-            return parent::__construct($msgKeyAndValue, $this->code . '00', null);
+            return parent::__construct($msgKeyAndValue, RequestObject::convert($this->code . '00', 'int'), null);
         }
         //设置 占位符 与 占位消息
         $msgKey = '';
@@ -42,11 +37,20 @@ class Error extends \Exception {
             }
         }
         //加载语言包
-        $langPath = PROTECTED_PATH . 'Lang' . DS . VERSION_NAME . DS . 'zh_CN' . DS . ucfirst($lang) . '.php';
-        $errorMsg = require_once ($langPath);
+        $sysLangPath = PROTECTED_PATH . 'Lang' . DS . VERSION_NAME . DS . SYS_LANG . DS . ucfirst($lang) . '.php';
+        $langPath = '';
+        if (file_exists($sysLangPath)){
+            $langPath = $sysLangPath;
+        }
+        $defaultLangPath = PROTECTED_PATH . 'Lang' . DS . VERSION_NAME . DS . DEFAULT_LANG . DS . ucfirst($lang) . '.php';
+        if (file_exists($defaultLangPath)){
+            $langPath = $defaultLangPath;
+        }
+        $errorMsg = @include ($langPath);
+        if (FALSE == $errorMsg)
+            throw new \Exception('Error config file not found or system language file not found.');
         if (empty($errorMsg))
             throw new \Exception(sprintf('Error lang not found in %s.', $langPath));
-
         if (!$msgKey)
             throw new \Exception(sprintf('Throw error key %s not found.', $msgKey));
 
@@ -58,7 +62,7 @@ class Error extends \Exception {
         if (!empty($msgList))
             $msgText = sprintf($msgText, implode(',', $msgList));
 
-        return parent::__construct($msgText, $code, null);
+        return parent::__construct($msgText, RequestObject::convert($code, 'int'), null);
     }
 
 }

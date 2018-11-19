@@ -1,12 +1,5 @@
 <?php
-
 namespace Strawframework\Base;
-
-/**
- * User: zack lee
- * Date: 2018/11/15
- * Time: 15:24
- */
 
 /**
  * 请求对象

@@ -34,10 +34,12 @@ final class Main{
         //composer autoload
         require_once(LIBRARY_PATH . 'vendor' . DS . 'autoload.php');
         //load env from Public/.env
-        try{
-            $dotenv = new \Dotenv\Dotenv(PUBLIC_PATH);
-            $dotenv->load();
-        }catch(\Exception $e){}
+
+        $_ENV['APP_ENV'] = getenv('APP_ENV');
+        //try{
+        //    $dotenv = new \Dotenv\Dotenv(PROTECTED_PATH . 'Config' . DS . $_ENV['APP_ENV']);
+        //    $dotenv->load();
+        //}catch(\Exception $e){}
 
         //有值则设定，否则生产环境
         if (!isset($_ENV['APP_ENV']))
@@ -76,13 +78,10 @@ final class Main{
         //header('Cache-control: private');
         //header('Content-type: text/html; charset=utf-8');
 
-
-        //配置信息目录,如数据库配置,缓存服务器配置
-        define("CONFIG_PATH", PROTECTED_PATH . 'Config' . DS);
-        //logs path
-        define('LOGS_PATH', PUBLIC_PATH . 'Logs' . DS);
         //runtime
         define('RUNTIME_PATH', PROTECTED_PATH . 'Runtime' . DS);
+        //logs path
+        define('LOGS_PATH', RUNTIME_PATH . 'Logs' . DS);
 
         //define('REQUEST_METHOD', $_SERVER['REQUEST_METHOD']);
         //define('IS_GET', REQUEST_METHOD == 'GET' ? TRUE : FALSE);
@@ -106,7 +105,7 @@ final class Main{
              //echo $fileName;
              //echo "<br/>";
             Main::import($class, [
-                'Controller', 'Error', 'Lang', 'Result', 'Ro'
+                'Controller', 'Error', 'Lang', 'Result', 'Ro', 'Util'
             ]);
         });
 
@@ -126,7 +125,7 @@ final class Main{
         session_start();
 
         $boot = "\\Strawframework\\" . $boot;
-        return new $boot();
+        return (new $boot())->loadConfig();
     }
 
     /**

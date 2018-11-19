@@ -1,5 +1,4 @@
 <?php
-
 namespace Strawframework\Base;
 
 use Strawframework\Straw;
@@ -66,41 +65,41 @@ class Controller extends Straw {
 
     public function __construct(bool $isView = TRUE) {
         parent::__construct();
-
-        //当前程序版本
-        $this->_Gver = '';//@todo version();
-
-        //read from config
-        $this->_availableModules = parent::$config['modules'];
-        if (!$this->_availableModules) {
-            ex('API available can not set');
-        }
-
-        //配置
-        $this->_Gset['site_domain'] = parent::$config['config']['site_domain'];
-        //本 module name
-        $this->_Gset['module_name'] = parent::$config['config']['module_name'];
-
-
-        //是否加载模板
-        if (TRUE == $isView) {
-            //实例化模板类
-            $this->view = new \Strawframework\Base\View();
-
-            $this->assign('availableModules', $this->_availableModules);
-
-            //站点设置
-            $this->assign("_Gset", $this->_Gset);
-            //程序版本
-            $this->assign('_Gver', $this->_Gver);
-        }
-
-        $this->_csrfToken = $this->_getCsrfToken();
-
-        //验证 csrf_token
-        if ($_REQUEST['_csrf_token'] && $_REQUEST['_csrf_token'] !== $this->_csrfToken) {
-            ex('Access Denied');
-        }
+        //
+        ////当前程序版本
+        //$this->_Gver = '';//@todo version();
+        //
+        ////read from config
+        //$this->_availableModules = parent::$config['modules'];
+        //if (!$this->_availableModules) {
+        //    ex('API available can not set');
+        //}
+        //
+        ////配置
+        //$this->_Gset['site_domain'] = parent::$config['config']['site_domain'];
+        ////本 module name
+        //$this->_Gset['module_name'] = parent::$config['config']['module_name'];
+        //
+        //
+        ////是否加载模板
+        //if (TRUE == $isView) {
+        //    //实例化模板类
+        //    $this->view = new \Strawframework\Base\View();
+        //
+        //    $this->assign('availableModules', $this->_availableModules);
+        //
+        //    //站点设置
+        //    $this->assign("_Gset", $this->_Gset);
+        //    //程序版本
+        //    $this->assign('_Gver', $this->_Gver);
+        //}
+        //
+        //$this->_csrfToken = $this->_getCsrfToken();
+        //
+        ////验证 csrf_token
+        //if ($_REQUEST['_csrf_token'] && $_REQUEST['_csrf_token'] !== $this->_csrfToken) {
+        //    ex('Access Denied');
+        //}
 
         //默认的证书
         //if (parent::$config['config']['sign_key'] && parent::$config['config']['rsa_sign']){
@@ -121,6 +120,36 @@ class Controller extends Straw {
      */
     public function getRequests(): ? RequestObject{
         return $this->requests;
+    }
+
+    /**
+     * 页面跳转
+     * @param string $url
+     * @param int    $time
+     * @param string $msg
+     */
+    protected function redirect(string $url, int $time = 0, string $msg = '') {
+        //多行URL地址支持
+        $url = str_replace(array("\n", "\r"), '', $url);
+        if (empty($msg)) {
+            $msg = "系统将在{$time}秒之后自动跳转到{$url}！";
+        }
+        if (!headers_sent()) {
+            // redirect
+            if (0 === $time) {
+                header('Location: ' . $url);
+            } else {
+                header("refresh:{$time};url={$url}");
+                echo($msg);
+            }
+            exit();
+        } else {
+            $str = "<meta http-equiv='Refresh' content='{$time};URL={$url}'>";
+            if ($time != 0) {
+                $str .= $msg;
+            }
+            exit($str);
+        }
     }
 
     //为本会话生成新的 csrf token

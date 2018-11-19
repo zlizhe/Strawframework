@@ -11,66 +11,66 @@ use Strawframework\Factory\RequestFactory;
 class Straw {
 
     //配置项目
-    protected static $config = [];
+    public static $config = [];
 
     public function __construct() {
 
-        //读取配置
-        $this->loadConfig();
-
-        //默认db
-        define('DEFAULT_DB', self::$config['config']['database']);
-        //默认 cache
-        if (FALSE != self::$config['config']['cache']) {
-            define('DEFAULT_CACHE', self::$config['config']['cache']);
-            //默认缓存 时间
-            define('DEFAULT_CACHEEXPIRE', self::$config['config']['cache_expire'] ?: 0);
-        }
     }
 
     /**
-     * strawframework 版本
+     * Strawframework 版本
      * @return string
      */
     public static function version() : string {
         return '3.0';
     }
 
-    //读取 site config from json file
-    private function loadSiteConfig(string $file): array {
-        $filePath = self::$config['config_path'] . "/" . $file;
-
-        return json_decode(preg_replace("/\/\*[\s\S]+?\*\//", "", file_get_contents($filePath)), TRUE);
-    }
 
     /**
      *  读取配置文件
      */
-    private function loadConfig(): void {
+    public function loadConfig(): Straw {
 
 
-        if (isset(self::$config) && self::$config) {
-            return;
+        if (!empty(self::$config)) {
+            return $this;
         }
 
-        //使用当前环境的配置文件
-        $fileName = strtolower($_ENV['APP_ENV']);
-        if (is_file(CONFIG_PATH . $fileName . '.config.php')) {
-            self::$config = include(CONFIG_PATH . $fileName . '.config.php');
+        //环境配置路径
+        $configPath = PROTECTED_PATH . 'Config' . DS . strtolower($_ENV['APP_ENV']) . DS;
 
+        //佛性加载器
+        self::$config = @include ($configPath . 'config.php');
+        if (false == self::$config)
+            throw new \Exception(sprintf('Config file config.php in env %s not loaded.', $_ENV['APP_ENV']));
 
-            //是否需要读 sites.json
-            if (self::$config['config_path']) {
-                //读取 modules.json sites.json 配置信息 straw 内
-                $modulesSetting = $this->loadSiteConfig('modules.json');
-                $sitesSetting = $this->loadSiteConfig('sites.json');
-                $siteArr = array_merge_recursive($modulesSetting, $sitesSetting);
-                //赋值回 config
-                self::$config['modules'] = $siteArr[strtolower(APP_ENV)];
-            }
-        } else {
-            ex('Config file not found in ' . CONFIG_PATH . $fileName . '.config.php !');
+        if (!empty(self::$config['database'])){
+            self::$config['databases'] = @include ($configPath . 'databases.php');
+            if (false == self::$config['databases'])
+                throw new \Exception(sprintf('Config file databases.php in env %s not loaded.', $_ENV['APP_ENV']));
         }
+        if (!empty(self::$config['cache'])){
+            self::$config['caches'] = @require_once ($configPath . 'caches.php');
+            if (false == self::$config['caches'])
+                throw new \Exception(sprintf('Config file caches.php in env %s not loaded.', $_ENV['APP_ENV']));
+        }
+
+
+        //默认db
+        if (!empty(self::$config['database']))
+            define('DEFAULT_DB', self::$config['database']);
+        //默认 cache
+        if (!empty(self::$config['cache'])) {
+            define('DEFAULT_CACHE', self::$config['cache']);
+            //默认缓存 时间
+            define('DEFAULT_CACHEEXPIRE', self::$config['cache_expire'] ?: 0);
+        }
+
+        //当前环境语言
+        $sysLang = current(explode(',', $_SERVER["HTTP_ACCEPT_LANGUAGE"]));
+        @define('SYS_LANG', str_replace('-', '_', $sysLang));
+        define('DEFAULT_LANG', self::$config['default_lang']);
+        return $this;
     }
 
 
@@ -87,11 +87,11 @@ class Straw {
         $_GET['_URI_'] = explode('/', key($_GET));
 
         //version
-        $v = $_GET['_URI_'][0] ?: 'v1';
+        $v = $_GET['_URI_'][1] ?: 'v1';
         //controller
-        $c = ucfirst($_GET['_URI_'][1]) ?: 'Home';
+        $c = ucfirst($_GET['_URI_'][2]) ?: 'Home';
         //router
-        $a = lcfirst($_GET['_URI_'][2]) ?: '/';
+        $a = lcfirst($_GET['_URI_'][3]) ?: '/';
         unset($_GET[key($_GET)], $_GET['_URI_']);
 
         //version = v0 is test
