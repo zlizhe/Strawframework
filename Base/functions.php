@@ -65,14 +65,14 @@ function ex(string $message, ?string $debugInfo = '', ?string $humanShow = '404 
     //记录日志至文件
     setLog($message . ' [Error] ' . $debugInfo);
     if (TRUE == APP_DEBUG) {
-        if (!IS_GET) {
-            echo \strawframework\base\Controller::encodeAjax([
-                                            'code' => $humanShow,
-                                            'msg'  => $message,
-                                            'info' => $debugInfo
-                                        ]);
-            exit();
-        }
+        // if (!IS_GET) {
+        //     echo \strawframework\base\Controller::encodeAjax([
+        //                                     'code' => $humanShow,
+        //                                     'msg'  => $message,
+        //                                     'info' => $debugInfo
+        //                                 ]);
+        //     exit();
+        // }
         //header("HTTP/1.1 " . $humanShow);
         // $message = $message.x
         echo '<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />';
@@ -83,13 +83,13 @@ function ex(string $message, ?string $debugInfo = '', ?string $humanShow = '404 
         echo "</pre>";
         echo '</td></tr></table>';
     } else {
-        if (!IS_GET) {
-            echo \strawframework\base\Controller::encodeAjax([
-                                            'code' => $humanShow,
-                                            'msg'  => $message,
-                                        ]);
-            exit();
-        }
+        // if (!IS_GET) {
+        //     echo \strawframework\base\Controller::encodeAjax([
+        //                                     'code' => $humanShow,
+        //                                     'msg'  => $message,
+        //                                 ]);
+        //     exit();
+        // }
         //header("HTTP/1.1 " . $humanShow);
         echo '<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />';
         echo '<table border="0" width="500" cellspacing="1" bgcolor="orange" style="text-align:center;margin:0 auto;"><tr><td bgcolor="orange"><b style="color:white;">服务器遇到了一个错误 !</b></td></tr><tr><td bgcolor="#f5f5f5" style="padding:10px">';
@@ -102,6 +102,7 @@ function ex(string $message, ?string $debugInfo = '', ?string $humanShow = '404 
 
 
 function setLog(...$logs) {
+    return true;
     //path url / to -
     $data = sprintf('[%s/%s] -- %s -- [Info] ', CONTROLLER_NAME, ACTION_NAME, date("Y/m/d H:i:s"));
 
