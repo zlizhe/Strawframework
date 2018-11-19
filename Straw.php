@@ -54,10 +54,7 @@ class Straw {
         }
 
         //使用当前环境的配置文件
-        $fileName = strtolower(APP_ENV);
-        if (!APP_ENV) {
-            $fileName = 'production';
-        }
+        $fileName = strtolower($_ENV['APP_ENV']);
         if (is_file(CONFIG_PATH . $fileName . '.config.php')) {
             self::$config = include(CONFIG_PATH . $fileName . '.config.php');
 

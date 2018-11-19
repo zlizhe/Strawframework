@@ -19,23 +19,42 @@ final class Main{
     //默认 ENV 生产环境
     private $appEnv = 'PRODUCTION';
 
-    public function setEnv(string $appEnv): Main{
-        if (!$appEnv)
-            throw new \Exception('APP ENV must be set.');
+    public function getEnv(): Main{
+        //源码目录
+        define("PROTECTED_PATH", ROOT_PATH . 'Protected' . DS);
+        //库目录
+        define("LIBRARY_PATH", ROOT_PATH . 'Strawframework' . DS);
+        //静态资源目录
+        define("PUBLIC_PATH", ROOT_PATH . 'Public' . DS);
+        //模板路径
+        define("TEMPLATES_PATH", PUBLIC_PATH . 'Templates' . DS);
+        //第三方扩展目录
+        //define("VENDORS_PATH", PROTECTED_PATH . 'Vendors' . DS);
 
-        $this->appEnv = $appEnv;
+        //composer autoload
+        require_once(LIBRARY_PATH . 'vendor' . DS . 'autoload.php');
+        //load env from Public/.env
+        try{
+            $dotenv = new \Dotenv\Dotenv(PUBLIC_PATH);
+            $dotenv->load();
+        }catch(\Exception $e){}
 
-        //生产环境 关闭 debug
-        if ('PRODUCTION' == strtoupper($this->appEnv)) {
-            define('APP_DEBUG', FALSE);
-        } else {
-            define('APP_DEBUG', TRUE);
-        }
+        //有值则设定，否则生产环境
+        if (!isset($_ENV['APP_ENV']))
+            $_ENV['APP_ENV'] = $this->appEnv;
+
         return $this;
     }
 
     //configure Strawframework
     public function configure(string $boot) : Straw {
+
+        //生产环境 关闭 debug
+        if ('PRODUCTION' == strtoupper($_ENV['APP_ENV'])) {
+            define('APP_DEBUG', FALSE);
+        } else {
+            define('APP_DEBUG', TRUE);
+        }
 
         if (TRUE == APP_DEBUG) {
             error_reporting(E_ERROR | E_WARNING | E_PARSE);
@@ -57,16 +76,6 @@ final class Main{
         //header('Cache-control: private');
         //header('Content-type: text/html; charset=utf-8');
 
-        //源码目录
-        define("PROTECTED_PATH", ROOT_PATH . 'Protected' . DS);
-        //库目录
-        define("LIBRARY_PATH", ROOT_PATH . 'Strawframework' . DS);
-        //静态资源目录
-        define("PUBLIC_PATH", ROOT_PATH . 'Public' . DS);
-        //模板路径
-        define("TEMPLATES_PATH", PUBLIC_PATH . 'Templates' . DS);
-        //第三方扩展目录
-        //define("VENDORS_PATH", PROTECTED_PATH . 'Vendors' . DS);
 
         //配置信息目录,如数据库配置,缓存服务器配置
         define("CONFIG_PATH", PROTECTED_PATH . 'Config' . DS);
