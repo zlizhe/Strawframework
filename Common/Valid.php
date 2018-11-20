@@ -6,7 +6,7 @@ namespace Strawframework\Common;
  * @package Strawframework\Common
  */
 
-final class Valid {
+class Valid {
 
     /**
      * 是否为手机访问

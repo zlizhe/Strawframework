@@ -20,26 +20,8 @@ final class Main{
     private $appEnv = 'PRODUCTION';
 
     public function getEnv(): Main{
-        //源码目录
-        define("PROTECTED_PATH", ROOT_PATH . 'Protected' . DS);
-        //库目录
-        define("LIBRARY_PATH", ROOT_PATH . 'Strawframework' . DS);
-        //静态资源目录
-        define("PUBLIC_PATH", ROOT_PATH . 'Public' . DS);
-        //模板路径
-        define("TEMPLATES_PATH", PUBLIC_PATH . 'Templates' . DS);
-        //第三方扩展目录
-        //define("VENDORS_PATH", PROTECTED_PATH . 'Vendors' . DS);
-
-        //composer autoload
-        require_once(LIBRARY_PATH . 'vendor' . DS . 'autoload.php');
-        //load env from Public/.env
 
         $_ENV['APP_ENV'] = getenv('APP_ENV');
-        //try{
-        //    $dotenv = new \Dotenv\Dotenv(PROTECTED_PATH . 'Config' . DS . $_ENV['APP_ENV']);
-        //    $dotenv->load();
-        //}catch(\Exception $e){}
 
         //有值则设定，否则生产环境
         if (!isset($_ENV['APP_ENV']))
@@ -50,6 +32,16 @@ final class Main{
 
     //configure Strawframework
     public function configure(string $boot) : Straw {
+        //源码目录
+        define("PROTECTED_PATH", ROOT_PATH . 'Protected' . DS);
+        //库目录
+        define("LIBRARY_PATH", ROOT_PATH . 'Strawframework' . DS);
+        //静态资源目录
+        define("PUBLIC_PATH", ROOT_PATH . 'Public' . DS);
+        //模板路径
+        define("TEMPLATES_PATH", PUBLIC_PATH . 'Templates' . DS);
+        //第三方扩展目录
+        //define("VENDORS_PATH", PROTECTED_PATH . 'Vendors' . DS);
 
         //生产环境 关闭 debug
         if ($this->appEnv == strtoupper($_ENV['APP_ENV'])) {
@@ -90,6 +82,14 @@ final class Main{
         //define('IS_DELETE', REQUEST_METHOD == 'DELETE' ? TRUE : FALSE);
         //define('IS_AJAX', ((isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest')) ? TRUE : FALSE);
 
+        //composer autoload
+        require_once(LIBRARY_PATH . 'vendor' . DS . 'autoload.php');
+        //get config from .evn.
+        //try{
+        //    $dotenv = new \Dotenv\Dotenv(PROTECTED_PATH . 'Config' . DS . $_ENV['APP_ENV']);
+        //    $dotenv->load();
+        //}catch(\Exception $e){}
+
         // 系统函数
         include(LIBRARY_PATH . 'Base' . DS . 'functions.php');
         //if (file_exists(PROTECTED_PATH . 'functions.php')) // 用户函数
@@ -105,7 +105,7 @@ final class Main{
              //echo $fileName;
              //echo "<br/>";
             Main::import($class, [
-                'Controller', 'Error', 'Lang', 'Result', 'Ro', 'Util'
+                'Controller', 'Error', 'Lang', 'Result', 'Ro', 'Common'
             ]);
         });
 

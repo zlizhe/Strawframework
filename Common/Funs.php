@@ -8,7 +8,7 @@ use Strawframework\Base\Error;
  * Class Funs
  * @package Strawframework\Common
  */
-final class Funs {
+class Funs {
     private static $me;
     /**
      * 获取
