@@ -14,7 +14,7 @@ use Strawframework\Straw;
 class Result implements \Strawframework\Protocol\Result {
 
     //返回类型
-    const CONTENT_TYPES = ['json', 'xml', 'html'];
+    const CONTENT_TYPES = ['json', 'xml', 'html', 'jsonp'];
 
     //输出类型
     private $contentType = 'application/json';
