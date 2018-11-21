@@ -108,17 +108,38 @@ final class Main{
         set_exception_handler(function($exception){
             // System \Exception 不显示具体错误信息
             if (FALSE == APP_DEBUG && 0 == $exception->getCode()){
-                return new Result(Code::SERVER_ERROR, 'An error has occurred');
+                return new Result(Code::FAIL, 'An error has occurred.');
             }
             $res = [
                 'error_code' => $exception->getCode()
             ];
             if (true == APP_DEBUG){
-                $res['error_throw'] = $exception->getFile() . '; Line:' . $exception->getLine();
-                $res['error_trace'] = $exception->getTrace();
+                $res['_debug_throw'] = $exception->getFile() . '; Line:' . $exception->getLine();
+                $res['_debug_trace'] = $exception->getTrace();
             }
-            return new Result(Code::SERVER_ERROR, $exception->getMessage(), $res);
+            return new Result(Code::FAIL, $exception->getMessage(), $res);
         });
+        //Fatal error 统一处理
+        //set_error_handler(function($errno, $errstr, $errfile, $errline){
+        //    //Fatal error
+        //    if (E_USER_ERROR == $errno){
+        //        return new Result(Code::SERVER_ERROR, $errstr, [
+        //            '_error_level' => 'error',
+        //            '_error_file' => $errfile . '; Line: ' . $errline
+        //        ]);
+        //    }
+        //
+        //    //warning
+        //    if (E_USER_WARNING == $errno){
+        //        return new Result(Code::SERVER_ERROR, $errstr, [
+        //            '_error_level' => 'warning',
+        //            '_error_file' => $errfile . '; Line: ' . $errline
+        //        ]);
+        //    }
+        //    //var_dump($errstr, $errfile);
+        //    return true;
+        //}, E_ALL & ~ E_NOTICE);
+
         session_start();
 
         $boot = "\\Strawframework\\" . $boot;

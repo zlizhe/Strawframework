@@ -16,6 +16,9 @@ class RequestObject{
         return ['trim'];
     }
 
+    //备份 request
+    public static $call = [];
+
     /**
      * @var Request
      * @param $reqName
@@ -89,6 +92,7 @@ class RequestObject{
             default:
                 throw new \Exception('Request method not invalid');
         }
+        self::$call = $params;
         unset($_REQUEST);
         foreach ($this as $key => $column) {
             $tmpValue = $params[$requests[$key]['name']];

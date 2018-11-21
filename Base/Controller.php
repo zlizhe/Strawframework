@@ -171,13 +171,6 @@ class Controller extends Straw {
     }
 
     /**
-     * 从配置文件中 获取 Gset 相关 给 static
-     */
-    private function _getGset() {
-
-    }
-
-    /**
      * 获取 form 表单中的所有数据
      * @return array | false
      */
@@ -188,64 +181,6 @@ class Controller extends Straw {
         parse_str($data, $value);
 
         return $value[$key] ?? NULL;
-    }
-
-    /**
-     * 检查数组中的空信息
-     * @return bool
-     */
-    protected function _emptyError(array $needArr, array $data, bool $moreError = FALSE): bool {
-        if (!is_array($needArr)) {
-            return FALSE;
-        }
-
-        if (!$data) {
-            return FALSE;
-        }
-
-        //错误信息
-        $error = '';
-        foreach ($needArr as $key => $value) {
-            if (empty($data[$value]) && '0' != $data[$value]) {
-                $error .= $key . "不能为空<br/>";
-                //不允许多个 error
-                if ($moreError != FALSE) {
-                    break;
-                }
-            }
-        }
-
-        return $error ? $this->_error($error) : TRUE;
-    }
-
-    /**
-     * 操作成功 ajax
-     *
-     * @param string $msg
-     */
-    protected function _success(string $msg = '操作成功', array $data = [], string $ref = NULL): void {
-        $returnData = [
-            'code' => self::SUCCESS,
-            'msg'  => $msg,
-            'ref'  => $ref
-        ];
-        if ($data && is_array($data)) {
-            $returnData = array_merge($data, $returnData);
-        }
-        $this->ajaxReturn($returnData);
-    }
-
-    /**
-     * 错误信息 ajax
-     *
-     * @param string $msg
-     * @param int    $code
-     */
-    protected function _error(string $msg = '一个错误发生了', int $code = self::FAIL): void {
-        $this->ajaxReturn([
-                              'code' => $code,
-                              'msg'  => $msg
-                          ]);
     }
 
 
@@ -293,19 +228,6 @@ class Controller extends Straw {
         $this->view->display($tpl ?: CONTROLLER_NAME . DS . ACTION_NAME, $hasHeaderFooter);
     }
 
-    /**
-     * 直接显示页面
-     *
-     * @param $tpl
-     */
-    public function show(string $tpl, bool $return = FALSE): void {
-
-        if (is_null($this->view)) {
-            $this->view = new View();
-        }
-
-        $this->view->show($tpl ?: CONTROLLER_NAME . DS . ACTION_NAME, $return);
-    }
 
     //解密 api
     public static function encodeAjax(array $arr = []): string {
@@ -334,67 +256,5 @@ class Controller extends Straw {
         return json_encode($arr);
     }
 
-    //return json decode
-    public function ajaxReturn(array $arr = []): void {
-
-        //如果定义了可用的 ajax_return 使用该方法，否则使用 json
-        if ('JSONP' == strtoupper($_REQUEST['_ajax_return'])) {
-
-            echo ($_REQUEST['callback'] ?: 'callback') . '(' . json_encode($arr) . ');';
-            exit();
-        }
-        //默认方法
-        $data = self::encodeAjax($arr);
-        echo $data;
-        exit();
-    }
-
-
-    public static $purviewArr = [];
-
-    /**
-     * 获取该操作是否有权限
-     *
-     * @param $action
-     *
-     * @return int
-     */
-    public function isPurview(string $action = ''): bool {
-        if (!$action) {
-            $action .= $this->_Gset['module_name'];
-            $action .= '/' . CONTROLLER_NAME . '/';
-            $action .= $_GET[2] ? $_GET[2] : ACTION_NAME;
-        }
-
-        $re = FALSE;
-        //获取登录信息
-        $token = $_REQUEST['token'];
-        if (!$token) {
-            $this->_error('请登录后在试', self::NOT_LOGIN);
-        }
-
-        $userArr = json_decode(getUrl($this->_availableModules['passportapi'] . '/user/get_user_info', 'POST', ['token' => $token]), TRUE)['data'];
-
-        if (!$userArr['gid']) {
-            $this->_error('请登录后在试', self::NOT_LOGIN);
-        }
-
-        //获取登录者所有权限
-        if (self::$purviewArr) {
-            $purviewArr = self::$purviewArr;
-        } else {
-//            print_r(getUrl($this->_availableModules['passportapi'].'/group/get_via_gid', 'POST', ['gid' => $userArr['gid']]));die;
-            $purviewArr = json_decode(getUrl($this->_availableModules['passportapi'] . '/group/get_via_gid', 'POST', ['gid' => $userArr['gid']]), TRUE)['fun'];
-            self::$purviewArr = $purviewArr;
-        }
-
-        // 允许操作
-        if (in_array(strtoupper(trim($action)), $purviewArr)) {
-            return TRUE;
-        } else {
-            //不允许操作如何返回
-            $this->_error('您没有权限执行本次操作', -11);
-        }
-    }
 
 }
