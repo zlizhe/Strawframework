@@ -51,18 +51,6 @@ class Controller extends Straw {
     //需要登录
     CONST NOT_LOGIN = -10;
 
-    //快速 new  model
-    public function __get(string $name): object {
-        //包含 Model 名称 的变量 自动创建 Model 对象并返回
-        if (stripos(strtolower($name), 'model')) {
-            //创建 Model 对象
-            return $this->loadM(str_ireplace('Model', '', $name));
-        }
-    }
-
-    //验证 csrf
-    protected $_csrfToken;
-
     public function __construct(bool $isView = TRUE) {
         parent::__construct();
         //
@@ -152,6 +140,9 @@ class Controller extends Straw {
         }
     }
 
+
+    //验证 csrf
+    protected $_csrfToken;
     //为本会话生成新的 csrf token
     protected function _getCsrfToken(): string {
 
@@ -183,6 +174,12 @@ class Controller extends Straw {
         return $value[$key] ?? NULL;
     }
 
+    /**
+     * 获取服务
+     */
+    protected function getService(string $serviceName): Service{
+        return $this->getSingleInstance('\Service\\' . ucfirst($serviceName));
+    }
 
     /**
      * 载入model类

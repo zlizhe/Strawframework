@@ -99,9 +99,7 @@ final class Main{
         spl_autoload_register(function (string $class): void {
              //echo $fileName;
              //echo "<br/>";
-            Main::import($class, [
-                'Controller', 'Error', 'Lang', 'Result', 'Ro', 'Common'
-            ]);
+            Main::import($class);
         });
 
         //throw error 错误统一处理

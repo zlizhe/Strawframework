@@ -16,7 +16,7 @@ use Strawframework\Straw;
  * Class Model
  * @package library
  */
-class Model extends Straw implements \strawframework\protocol\Db {
+class Model extends Straw implements \Strawframework\Protocol\Db {
 
     //当前数据库对象
     protected $db = NULL;
@@ -45,35 +45,36 @@ class Model extends Straw implements \strawframework\protocol\Db {
     // 设置更新的字段名称
     protected $_field = 'id';
 
-    //快速更新值
-    public function __set(string $name, string $value): bool {
-
-        if (!is_null($this->_value)) {
-            return $this->update([$name => $value], [$this->_field => $this->_value]) ? TRUE : FALSE;
-        }
-
-    }
-
-    //如果设置了 $_id 自动取 该数据值
-    public function __get(string $name = '_ALL_') {
-
-        if (!is_null($this->_value)) {
-
-            $data = $this->query([$this->_field => $this->_value])->getOne();
-
-            if ($name == '_ALL_') {
-                return $data ?? null;
-            } else {
-                return $data[$name] ?? null;
-            }
-        }
-    }
+    ////快速更新值
+    //public function __set(string $name, string $value): bool {
+    //
+    //    if (!is_null($this->_value)) {
+    //        return $this->update([$name => $value], [$this->_field => $this->_value]) ? TRUE : FALSE;
+    //    }
+    //
+    //}
+    //
+    ////如果设置了 $_id 自动取 该数据值
+    //public function __get(string $name = '_ALL_') {
+    //
+    //    if (!is_null($this->_value)) {
+    //
+    //        $data = $this->query([$this->_field => $this->_value])->getOne();
+    //
+    //        if ($name == '_ALL_') {
+    //            return $data ?? null;
+    //        } else {
+    //            return $data[$name] ?? null;
+    //        }
+    //    }
+    //}
 
 
     /**
      * 构造函数
      */
     public function __construct(?string $table = '', ?string $pre = '', ?string $dbtag = DEFAULT_DB) {
+        return true;//@todo 待改造
         parent::__construct();
         // 获取数据库操作对象
         if (!self::$dbArr[$dbtag]) {
