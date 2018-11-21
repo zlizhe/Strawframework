@@ -30,7 +30,7 @@ class RequestObject{
     public function __call($reqName, $param){
 
         //getField
-        if (0 == strpos(strtolower($reqName), 'get')) {
+        if (0 === strpos(strtolower($reqName), 'get')) {
             $name = substr($reqName, 3);
             $propertyName = lcfirst($name);
             if (!property_exists($this, $propertyName)){
@@ -155,7 +155,12 @@ class RequestObject{
             return new \MongoDB\BSON\ObjectId($v);
         };
 
-        return $$type($v);
+        try{
+            return $$type($v);
+        }catch (\Error $e){
+            //Other type
+            return (object)$v;
+        }
     }
 
     // private static $getIntValue = [];
