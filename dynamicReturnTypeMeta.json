@@ -1,0 +1,35 @@
+{
+  "methodCalls": [
+    {
+      "class": "\\Strawframework\\Base\\Controller",
+      "method": "getService",
+      "position": 0,
+      "mask": "Service\\%s"
+    }
+    ,{
+      "class": "\\Strawframework\\Base\\Service",
+      "method": "getLogic",
+      "position": 0,
+      "mask": "Logic\\%s"
+    }
+    ,{
+      "class": "\\Strawframework\\Base\\Service",
+      "method": "getModel",
+      "position": 0,
+      "mask": "Model\\%s"
+    }
+    ,{
+      "class": "\\Strawframework\\Base\\Logic",
+      "method": "getModel",
+      "position": 0,
+      "mask": "Model\\%s"
+    }
+  ]
+//  "functionCalls": [
+//    {
+//      "function": "\\maskExample",
+//      "position": 0
+//      "mask": "Test%sModel"
+//    }
+//  ]
+}
