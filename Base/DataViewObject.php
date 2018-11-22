@@ -8,8 +8,11 @@
 namespace Strawframework\Base;
 
 
-
-abstract class DataViewObject {
+/**
+ * Class DataViewObject
+ * @package Strawframework\Base
+ */
+class DataViewObject {
     //类型
     const AVAILABLE_TYPE = ['int', 'string', 'bool', 'array', 'object'];
 

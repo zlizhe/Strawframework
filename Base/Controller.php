@@ -41,16 +41,6 @@ class Controller extends Straw {
     //模板 页面
     private $view = NULL;
 
-    // API 常量
-    // 默认成功
-    CONST SUCCESS = 0;
-    // 默认失败
-    CONST FAIL = 1;
-    // 数据为空
-    CONST ISEMPTY = 2;
-    //需要登录
-    CONST NOT_LOGIN = -10;
-
     public function __construct(bool $isView = TRUE) {
         parent::__construct();
         //
@@ -176,6 +166,7 @@ class Controller extends Straw {
 
     /**
      * 获取服务
+     * @var Service
      */
     protected function getService(string $serviceName): Service{
         return $this->getSingleInstance('\Service\\' . ucfirst($serviceName));
