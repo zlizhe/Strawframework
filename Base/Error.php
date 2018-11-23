@@ -1,6 +1,8 @@
 <?php
 namespace Strawframework\Base;
 
+use Strawframework\Common\Funs;
+
 /**
  * 异常处理
  * Class Error
@@ -60,7 +62,7 @@ class Error extends \Exception {
 
         //设置占位内容
         if (!empty($msgList))
-            $msgText = sprintf($msgText, implode(',', $msgList));
+            $msgText = vsprintf($msgText, $msgList);
 
         return parent::__construct($msgText, RequestObject::convert($code, 'int'), null);
     }

@@ -1,6 +1,10 @@
 <?php
 namespace Strawframework\Base;
 
+use MongoDB\BSON\ObjectId;
+use MongoDB\InsertManyResult;
+use MongoDB\InsertOneResult;
+use MongoDB\Model\BSONDocument;
 use Strawframework\Straw, Strawframework\Protocol\Db;
 
 /**
@@ -28,9 +32,6 @@ class Model extends Straw implements Db {
 
     //当前配置 -> database
     protected static $dbArr = [];
-
-    //缓存 obj
-    private $cache;
 
     ////设置 $_id 自动取一条数据
     //protected $_value = NULL;
@@ -185,23 +186,23 @@ class Model extends Straw implements Db {
     private $_modelData = [];
 
     // 连贯操作 where 语句查询
-    // * @param string|array $query  查询条件
-    public function query(array $where = []): Model {
+    // * @param string|array|object $query  查询条件
+    public function query($where = []): Model {
 
         $this->_modelData['query'] = $where;
 
         return $this;
     }
-
-    // 连贯操作 绑定数据
-    public function data(array $data): Model {
-
-        if (!empty($data)) {
-            $this->_modelData['data'] = $data;
-        }
-
-        return $this;
-    }
+    //
+    //// 连贯操作 绑定数据
+    //public function data(array $data): Model {
+    //
+    //    if (!empty($data)) {
+    //        $this->_modelData['data'] = $data;
+    //    }
+    //
+    //    return $this;
+    //}
 
     // 连贯操作 需要查询的字段
     // * @param string|array $field  需要查询的字段,字符串或者数组
@@ -257,8 +258,16 @@ class Model extends Straw implements Db {
         return $this;
     }
 
-    //写入新数据 $data
-    public function insert(array $data, array $args = []) {
+
+    /**
+     * 写入新数据 $data
+     * @param array | object $data
+     * @param array $args
+     *
+     * @return InsertOneResult | InsertManyResult
+     * @throws \Exception
+     */
+    public function insert($data, array $args = []) {
         $this->_getConnect('write');
 
         return $this->db->insert($data, $args);
@@ -284,7 +293,7 @@ class Model extends Straw implements Db {
      * @return array
      * @throws \Exception
      */
-    public function getOne(): array {
+    public function getOne() {
         $this->_getConnect('read');
 
         $this->_setCanEmpty(['query' => '', 'data' => '', 'field' => '', 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
@@ -583,5 +592,32 @@ class Model extends Straw implements Db {
         $this->_modelData = [];
 
         return $result;
+    }
+
+    /**
+     * @param $obj
+     */
+    public function toArray($obj){
+
+        $data = [];
+
+        //if (!($obj instanceof BSONDocument)){
+        //
+        //
+        //}
+
+        //$list = (array)$obj;
+        foreach ($obj as $key => $value) {
+            if (is_object($value)){
+                if ($value instanceof ObjectId)
+                    $data[$key] = (string)$value;
+                else{
+                    $data[$key] = $this->toArray($value);
+                }
+            }else{
+                $data[$key] = $value;
+            }
+        }
+        return $data;
     }
 }

@@ -1,6 +1,8 @@
 <?php
 namespace Strawframework\Base;
 
+use Strawframework\Common\Code;
+
 /**
  * 请求对象
  * Class RequestObject
@@ -9,7 +11,7 @@ namespace Strawframework\Base;
 class RequestObject{
 
     //请求可用的类型
-    const AVAILABLE_TYPE = ['int', 'string', 'array'];
+    const AVAILABLE_TYPE = ['int', 'float', 'bool', 'string', 'array'];
 
     //默认过滤器 不建议添加超过3个
     protected function defaultFilters(): array {
@@ -34,7 +36,7 @@ class RequestObject{
             $name = substr($reqName, 3);
             $propertyName = lcfirst($name);
             if (!property_exists($this, $propertyName)){
-                throw new \Exception(sprintf('Property not found %s', $name));
+                throw new \Exception(sprintf('Property not found %s', $name), Code::FAIL);
             }else{
                 return $this->{$propertyName};
             }
@@ -72,6 +74,8 @@ class RequestObject{
      * @throws \Exception
      */
     public function setRequests(string $method, array $requests){
+        //$t = null;
+        //var_dump(is_null($t), empty($t), isset($t));die;
         //最终取值
         $params = [];
         switch ($method) {
@@ -90,10 +94,11 @@ class RequestObject{
                 $params = array_merge($_GET, $params);
                 break;
             default:
-                throw new \Exception('Request method not invalid');
+                throw new \Exception('Request method not invalid', Code::NOT_ALLOW);
         }
         self::$call = $params;
         unset($_REQUEST);
+
         foreach ($this as $key => $column) {
             $tmpValue = $params[$requests[$key]['name']];
         //}
@@ -102,7 +107,7 @@ class RequestObject{
             //必填检查
             if (self::$requiredColumns && in_array($key, self::$requiredColumns)){
                 if (empty($tmpValue) && '0' != $tmpValue)
-                    throw new \Exception(sprintf('Column %s can not be null.', $requests[$key]['name']));
+                    throw new \Exception(sprintf('Column %s can not be null.', $requests[$key]['name']), Code::FAIL);
             }
             if (!empty($tmpValue) || '0' == $tmpValue){
                 $setFilter = 'set' . ucfirst($key);
@@ -119,48 +124,62 @@ class RequestObject{
                     $tmpValue = RequestObject::convert($tmpValue, $requests[$key]['type']);
                 }catch (\TypeError $e){
                     //value type error
-                    throw new \Exception(sprintf('Request %s type must be %s.', $requests[$key]['name'], $requests[$key]['type']));
+                    throw new \Exception(sprintf('Request %s type must be %s.', $requests[$key]['name'], $requests[$key]['type']), Code::NOT_ALLOW);
                 }
+                //var_dump($tmpValue, $requests[$key]['type']);
                 $this->{$key} = $tmpValue;
             }
         }
+        //exit();
         return $this;
     }
 
     /**
-     * 类型转换
+     * 尝试类型转换
+     * @param        $v
+     * @param string $type
+     *
+     * @return object
+     * @throws \Exception
      */
     public static function convert($v, string $type){
-        $int = function($v): int {
-            return $v;
-        };
+        $doConvert = [
+            'int'      => function ($v): int
+            {
+                return $v;
+            },
+            'float'    => function ($v): float
+            {
+                return $v;
+            },
+            'string'   => function ($v): string
+            {
+                return $v;
+            },
+            'bool'     => function ($v): bool
+            {
+                return $v;
+            },
+            'array'    => function ($v): array
+            {
+                return $v;
+            },
+            'object'   => function ($v): object
+            {
+                return $v;
+            },
+            'objectid' => function ($v): \MongoDB\BSON\ObjectId
+            {
+                return new \MongoDB\BSON\ObjectId($v);
+            },
+        ];
 
-        $string = function($v): string{
-            return $v;
-        };
-
-        $bool = function($v): bool{
-            return $v;
-        };
-
-        $array = function($v): array{
-            return $v;
-        };
-
-        $object = function($v): object{
-            return $v;
-        };
-
-        $objectid = function($v): \MongoDB\BSON\ObjectId{
-            return new \MongoDB\BSON\ObjectId($v);
-        };
-
-        try{
-            return $$type($v);
-        }catch (\Error $e){
-            //Other type
+        //不存在的转换直接按对象转换 @todo 测试
+        if (!key_exists($type, $doConvert) /*&& $v instanceof \stdClass*/){
             return (object)$v;
         }
+
+        return $doConvert[$type]($v);
     }
 
     // private static $getIntValue = [];

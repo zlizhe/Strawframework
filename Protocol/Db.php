@@ -19,14 +19,14 @@ interface Db{
      * 根据条件查找一条
      * @return array
      */
-    public function getOne() : array;
+    public function getOne();
 
 
     /**
      * 查找所有符合条件的行
      *
      */
-    public function getAll() : array;
+    public function getAll();
 
     /**
      * 执行完整 sql

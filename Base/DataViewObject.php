@@ -8,13 +8,15 @@
 namespace Strawframework\Base;
 
 
+use Strawframework\Common\Code;
+
 /**
  * Class DataViewObject
  * @package Strawframework\Base
  */
 class DataViewObject {
     //类型
-    const AVAILABLE_TYPE = ['int', 'string', 'bool', 'array', 'object'];
+    const AVAILABLE_TYPE = ['int', 'float', 'string', 'bool', 'array', 'object'];
 
     //默认过滤器 不建议添加超过3个
     protected function defaultFilters(): array {
@@ -34,7 +36,7 @@ class DataViewObject {
             $name = substr($colName, 3);
             $propertyName = lcfirst($name);
             if (!property_exists($this, $propertyName)){
-                throw new \Exception(sprintf('Get property %s not found.', $name));
+                throw new \Exception(sprintf('Get property %s not found.', $name), Code::FAIL);
             }else{
                 return $this->{$propertyName};
             }
@@ -56,7 +58,7 @@ class DataViewObject {
                     $param = RequestObject::convert($param, static::$dvoObject[$propertyName]['type']);
                 }catch (\TypeError $e){
                     //value type error
-                    throw new \Exception(sprintf('Dvo column %s type must be %s.', static::$dvoObject[$propertyName]['name'], static::$dvoObject[$propertyName]['type']));
+                    throw new \Exception(sprintf('Dvo column %s type must be %s.', static::$dvoObject[$propertyName]['name'], static::$dvoObject[$propertyName]['type']), Code::NOT_ALLOW);
                 }
                 $this->{$propertyName} = $param;
                 return $this;
@@ -73,6 +75,8 @@ class DataViewObject {
      * DataViewObject constructor.
      *
      * @param string $scenes
+     *
+     * @throws \Exception
      */
     public function __construct($scenes = 'default') {
         $this->_scenes = $scenes;
@@ -111,5 +115,21 @@ class DataViewObject {
                 static::$dvoObject[$method->getName()] = ['name' => $name, 'type' => $type];
             }
         }
+    }
+
+    /**
+     * 获取子类 所有 Object
+     */
+    public function getDvos():? array{
+
+        $data = [];
+        foreach ($this as $key => $value) {
+            if ('_scenes' == $key)
+                continue;
+
+            if (!is_null($value))
+                $data[$key] = $this->{'get' . ucfirst($key)}();
+        }
+        return $data;
     }
 }

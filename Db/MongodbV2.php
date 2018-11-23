@@ -1,16 +1,7 @@
 <?php
 namespace Strawframework\Db;
-
-use MongoDB\BSON\ObjectId;
-use MongoDB\BSON\Regex;
-use MongoDB\InsertManyResult;
-use MongoDB\InsertOneResult;
-use MongoDB\Model\BSONDocument;
-use Strawframework\Base\DataViewObject;
-
 /**
- * mongodb php Library
- * pecl install mongodb
+ * mongodb php 新扩展
  * http://php.net/mongodb
  */
 
@@ -28,19 +19,15 @@ class Mongodb{
 	//model 中执行的 sql
 	private $sqlQuery = '';
 
+
     /**
      * 连接 mongodb
      * 选择 test -> user
-     * Mongodb constructor.
-     *
-     * @param $config
-     *
-     * @throws \Exception
      */
-    public function __construct($config){
+    public function __construct($config = []){
 
         if (!extension_loaded("mongodb"))
-            throw new \Exception('Mongodb extend not found.');
+            ex("Mongodb Extend Not Support!");
 
         try {
             //mongo connect link
@@ -49,16 +36,17 @@ class Mongodb{
             }else{
                 $mongoConnect = sprintf('mongodb://%s:%d', $config['host'], $config['port']);
             }
-            /**
-             * http://php.net/manual/zh/mongodb-driver-manager.construct.php
-             * uriOptions and driverOptions
-             */
-            $this->connect = new \MongoDB\Client($mongoConnect);
-        } catch (\MongoConnectionException | \Exception $e) {
-            throw new \Exception(sprintf("Mongodb connect error : ", $e->getMessage()));
+            //@todo https://github.com/mongodb/mongo-php-driver/issues/374#issuecomment-323404660 fix some bug ['ssl' => false] 2017/11/14
+            $this->connect = new \MongoDB\Driver\Manager($mongoConnect, ['ssl' => false]);
+            //$mongoConnect = sprintf('mongodb://%s:%d', $config['host'], $config['port']);
+            //$this->connect = new \MongoDB\Driver\Manager($mongoConnect, $config['username'] ? ['username' => $config['username'], 'password' => $config['password'], 'ssl' => false] : ['ssl' => false]);
+        } catch (\Exception $e) {
+            ex("Mongodb Connect Error", $e->getMessage());
         }
         //连接 current db 
         $this->db = $config['dbname'];
+        //$this->db = $mongo->executeCommand($config['dbname'], new \MongoDB\Driver\Command(["dbstats" => 1]));
+
 
         unset($mongoConnect, $config);
         //每次都重新选择表
@@ -68,22 +56,14 @@ class Mongodb{
     }
 
     public function __destruct(){
-        unset($this->collection, $this->db, $this->sqlQuery);
-    }
-
+        unset($this->collection, $this->db); 
+    }    
     /**
-     * 选择待操作表对象
-     * @param $collection
-     *
-     * @throws \Exception
+     * 选择表
+     * @param [type] $collection [description]
      */
     public function setTable($collection){
-        try{
-
-            $this->collection = $this->connect->{$this->db}->{$collection};
-        }catch (\MongoException $e){
-            throw new \Exception(sprintf('Mongodb select collection error : ', $e->getMessage()));
-        }
+        $this->collection = $collection;
     }
 
     //取最后一次执行的 sql
@@ -91,81 +71,69 @@ class Mongodb{
         return $this->sqlQuery;
     }
 
+    //写入 data
+    public function insert(array $data, array $args = []){
+        if (!$this->collection)
+            ex('Collection not found');
 
-    /**
-     * 解析 DVO
-     * @param      $dvos
-     * @param bool $genId 需要生成 _id
-     *
-     * @return array
-     * @throws \Exception
-     */
-    private function parseDVO($dvos, bool $genId = false): array {
-
-        $dvoArr = [];
-        if (!is_array($dvos))
-            $dvoArr[0] = $dvos;
-        else{
-            $dvoArr = $dvos;
-        }
-
-        $data = [];
-        foreach ($dvoArr as $key => $dvo) {
-
-            if (!($dvo instanceof DataViewObject))
-                throw new \Exception(sprintf('Data %s must instance of DVO.', var_export($dvo, true)));
-
-
-            $data[$key] = $dvo->getDvos();
-            //_id 不存在时 手动写入
-            if (true == $genId && !key_exists('_id', $data[$key]))
-                $data[$key]['_id'] = new ObjectId();
-
-            $data[$key] = $this->parseQuery($data[$key]);
-        }
-        return is_array($dvos) ? $data : current($data);
-    }
-
-    //https://docs.mongodb.com/php-library/master/tutorial/crud/#insert-one-document
-    const INSERT_TYPE_ONe = 'insertOne';
-    //https://docs.mongodb.com/php-library/master/tutorial/crud/#insert-many-documents
-    const INSERT_TYPE_MANY = 'insertMany';
-
-
-    /**
-     * 写入 data
-     * https://docs.mongodb.com/php-library/master/reference/method/MongoDBCollection-insertOne/#phpmethod.MongoDB\Collection::insertOne
-     * @param       $data
-     * @param array $options
-     *
-     * @return InsertOneResult | InsertManyResult
-     * @throws \Exception
-     */
-    public function insert($data, array $options = []){
 
         try {
-            if (!$this->collection)
-                throw new \Exception('Please set table first.');
+            $bulk = new \MongoDB\Driver\BulkWrite;
 
-            //非 DVO
-            if (is_array($data)){
-                //实现方式
-                $insertType = self::INSERT_TYPE_MANY;
+            //传入非数组
+            if (!is_array($data))
+                throw new \Exception((sprintf("Insert value must to be array : %s", var_export($data, true))));
+
+            $allData = [];
+            if(count($data) == count($data, COUNT_RECURSIVE)){
+                $allData[0] = $data;
             }else{
-                $insertType = self::INSERT_TYPE_ONe;
+                $allData = $data;
             }
-            $allData = $this->parseDVO($data, true);
 
             //记录查询语句
-            $this->sqlQuery .= $this->collection . '.'.$insertType.'(';
+            $this->sqlQuery .= $this->db.'.'.$this->collection . '.insertMany(';
             $this->sqlQuery .= $allData ? json_encode($allData) : '{}';
             $this->sqlQuery .= ')';
 
+            //多维数组
+            $_id = [];
+            $br = false;
+            foreach ($allData as $key => $value) {
+                //传入 ['bulk' => true] 时批量插入
+                if (!$args['bulk']){
+                    $value = $data;
+                    $br = true;
+                }
+                $_id[$key] = (string)$bulk->insert($value);
 
-            $insertData = $this->collection->{$insertType}($allData, $options);
-            return $insertData;
+                //含有子数组 并 value 不为数组时 只有一行数据需要写入
+                if (true == $br)
+                    break;
+            }
+
+
+            $reData = $this->connect->executeBulkWrite($this->db.'.'.$this->collection, $bulk);
+            //写入失败了
+            if ($writeConcernError = $reData->getWriteConcernError()) {
+                throw new \Exception(sprintf("%s (%d): %s", $writeConcernError->getMessage(), $writeConcernError->getCode(), var_export($writeConcernError->getInfo(), true)));
+            }
+            //批量更新
+            if ($args['bulk']){
+                //全部成功
+                if ($reData->getInsertedCount() == count($allData)){
+                    //返回所有插入成功的 id
+                    return $_id;
+                }else{
+                    return false;
+                }
+            }else{
+                //一条数据写入
+                return current($_id);
+            }
+            //\MongoDB\Driver\Exception\BulkWriteException
         } catch (\Exception $e) {
-            throw new \Exception(sprintf("Mongodb insert error %s. - Last Query: %s", $e->getMessage(), $this->getLastSql()));
+            ex("Mongodb Insert Error", sprintf("%s ".PHP_EOL.'Last Query : %s', $e->getMessage(), $this->getLastSql()), 'DB Error');
         }
     }
 
@@ -173,27 +141,32 @@ class Mongodb{
     /**
      *  根据查询条件返回一条结果
      */
-    public function getOne($query = '', $field = []) : BSONDocument {
+    public function getOne($query = '', $field=[], $data = '') : array {
+
+        if (!$this->collection)
+            ex('Collection not found');
+
+        if (!empty($query))
+            $query = $this->parseQuery($query);
+
+        //记录查询语句
+        $this->sqlQuery = $this->db.'.'.$this->collection . '.find(';
+        $this->sqlQuery .= $query ? json_encode($query) : '{}';
 
         try{
 
-            if (!$this->collection)
-                throw new \Exception('Please set table first.');
+            $res = $this->connect->executeQuery(
+                $this->db.'.'.$this->collection,
+                new \Mongodb\Driver\Query($query, $this->getOptions($field, $limt=1))
+            )->toArray();
 
-            if (!empty($query))
-                $query = $this->parseDVO($query);
-
-            //记录查询语句
-            $this->sqlQuery = $this->collection . '.findOne(';
-            $this->sqlQuery .= $query ? json_encode($query) : '{}';
-
-            if (!empty($field))
-                $options = $this->parseOptions($field);
-
-            $res = $this->collection->findOne($query, $options ?? []);
-            return $res;
+            if ($res){
+                $res = current($res);
+                $res->_id = (string)$res->_id;
+            }
+            return (array)$res;
         } catch (\Exception $e){
-            throw new \Exception(sprintf("Mongodb getOne error %s. - Last Query: %s", $e->getMessage(), $this->getLastSql()));
+            ex("Mongodb Find Error", sprintf("%s ".PHP_EOL.'Last Query : %s', $e->getMessage(), $this->getLastSql()), 'DB Error');
         }
     }
 
@@ -236,16 +209,7 @@ class Mongodb{
         }
     }
 
-    /**
-     * 解析Mongodb Options
-     * @param array $field
-     * @param int   $limit
-     * @param array $sort
-     * @param int   $skip
-     *
-     * @return array
-     */
-    private function parseOptions($field = [], $limit = 0, $sort = [], $skip = 0){
+    private function getOptions($field = [], $limit = 0, $sort = [], $skip = 0){
         //兼容 mysql * to everything
         if ('*' == $field)
             $field = [];
@@ -265,12 +229,11 @@ class Mongodb{
                     $falseField['projection'][$key] = 0;
                 }
             }
-            //if (empty($falseField)){
-            //    $options = $newField;
-            //}else{
-            //    $options = $falseField;
-            //}
-            $options['projection'] = array_merge($newField['projection'], $falseField['projection']);
+            if (empty($falseField)){
+                $options = $newField;
+            }else{
+                $options = $falseField;
+            }
 
             //field 语句记录
             if(count($newField)) {
@@ -351,36 +314,33 @@ class Mongodb{
     }
 
     /**
-     * 解析 query 中的关键词  like 与 _id
-     * @param $data
-     *
-     * @return mixed
-     * @throws \Exception
+     * 解析 query 中的关键词  like _id
      */
-    private function parseQuery($data){
+    private function parseQuery($arr){
 
-        foreach ($data as $key => $value) {
+        foreach ($arr as $key => $value) {
 
             // 查询字段的安全过滤
-            if(!preg_match('/^[A-Z_\|\&\-.a-z0-9|$]+$/',trim($key)))
-                throw new \Exception(sprintf("Query column %s invalid.", $key));
+            if(!preg_match('/^[A-Z_\|\&\-.a-z0-9|$]+$/',trim($key))){
+                ex(sprintf("不合法的查询名称 : %s", $key));
+            }
 
             //包含 _id 不是 mongoid 对象 也不是数组 处理成 mongoid对象
-            if (strtolower($key) == '_id' && (!($value instanceof ObjectId) && !is_array($value))) {
-                $data[$key] = new ObjectId($value);
+            if (strtolower($key) == '_id' && (!is_object($value) && !is_array($value))){
+                $arr[$key] = new \MongoDB\BSON\ObjectId($value);
             }
 
             if (is_array($value) && count($value)){
                 //包含 like
                 if (array_key_exists('$like', $value)){
-                    $data[$key] = new Regex($value['$like'], 'i');
+                    $arr[$key] = new \Mongodb\BSON\Regex($value['$like'], 'i');
                 }else{
                     //还是数组 继续查找
-                    $data[$key] = $this->parseQuery($value);
+                    $arr[$key] = $this->parseQuery($value);
                 }
             }
         }
-        return $data;
+        return $arr;
     }
 
     /**

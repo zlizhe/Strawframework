@@ -102,6 +102,26 @@ final class Main{
             Main::import($class);
         });
 
+        //Fatal error 统一处理
+        set_error_handler(function($errno, $errstr, $errfile, $errline){
+            //Fatal error
+            if (E_ERROR == $errno){
+                return new Result(Code::SERVER_ERROR, $errstr, [
+                    '_error_level' => 'Server Error!',
+                    '_error_file' => $errfile . '; Line: ' . $errline
+                ]);
+            }
+
+            //warning
+            if (E_WARNING == $errno){
+                return new Result(Code::SERVER_ERROR, $errstr, [
+                    '_error_level' => 'Server Warning!',
+                    '_error_file' => $errfile . '; Line: ' . $errline
+                ]);
+            }
+            //var_dump($errno, $errstr, $errfile);
+            return true;
+        }, E_ALL & ~ E_NOTICE);
         //throw error 错误统一处理
         set_exception_handler(function($exception){
             // System \Exception 不显示具体错误信息
@@ -117,26 +137,6 @@ final class Main{
             }
             return new Result(Code::FAIL, $exception->getMessage(), $res);
         });
-        //Fatal error 统一处理
-        //set_error_handler(function($errno, $errstr, $errfile, $errline){
-        //    //Fatal error
-        //    if (E_USER_ERROR == $errno){
-        //        return new Result(Code::SERVER_ERROR, $errstr, [
-        //            '_error_level' => 'error',
-        //            '_error_file' => $errfile . '; Line: ' . $errline
-        //        ]);
-        //    }
-        //
-        //    //warning
-        //    if (E_USER_WARNING == $errno){
-        //        return new Result(Code::SERVER_ERROR, $errstr, [
-        //            '_error_level' => 'warning',
-        //            '_error_file' => $errfile . '; Line: ' . $errline
-        //        ]);
-        //    }
-        //    //var_dump($errstr, $errfile);
-        //    return true;
-        //}, E_ALL & ~ E_NOTICE);
 
         session_start();
 
