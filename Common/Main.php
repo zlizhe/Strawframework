@@ -95,6 +95,7 @@ final class Main{
         //}catch(\Exception $e){}
 
         require_once(LIBRARY_PATH . 'Straw.php');
+        header(sprintf('X-Powered-By: Strawframework/%s', Straw::version()));
 
         spl_autoload_register(function (string $class): void {
              //echo $fileName;

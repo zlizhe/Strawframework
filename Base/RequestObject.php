@@ -1,6 +1,8 @@
 <?php
 namespace Strawframework\Base;
 
+use MongoDB\BSON\ObjectID;
+use MongoDB\BSON\UTCDateTime;
 use Strawframework\Common\Code;
 
 /**
@@ -168,15 +170,19 @@ class RequestObject{
             {
                 return $v;
             },
-            'objectid' => function ($v): \MongoDB\BSON\ObjectId
+            '\MongoDB\BSON\ObjectId' => function ($v): \MongoDB\BSON\ObjectId
             {
-                return new \MongoDB\BSON\ObjectId($v);
+                return new ObjectID($v);
+            },
+            '\MongoDB\BSON\UTCDateTime' => function ($v): \MongoDB\BSON\UTCDateTime
+            {
+                return new UTCDateTime($v);
             },
         ];
 
         //不存在的转换直接按对象转换 @todo 测试
         if (!key_exists($type, $doConvert) /*&& $v instanceof \stdClass*/){
-            return (object)$v;
+            return $v;
         }
 
         return $doConvert[$type]($v);

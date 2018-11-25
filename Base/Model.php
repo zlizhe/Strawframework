@@ -2,6 +2,7 @@
 namespace Strawframework\Base;
 
 use MongoDB\BSON\ObjectId;
+use MongoDB\BSON\UTCDateTime;
 use MongoDB\InsertManyResult;
 use MongoDB\InsertOneResult;
 use MongoDB\Model\BSONDocument;
@@ -597,7 +598,9 @@ class Model extends Straw implements Db {
     /**
      * @param $obj
      */
-    public function toArray($obj){
+    public static function toArray($obj){
+        if (!is_array($obj) && !is_object($obj))
+            return $obj;
 
         $data = [];
 
@@ -609,10 +612,17 @@ class Model extends Straw implements Db {
         //$list = (array)$obj;
         foreach ($obj as $key => $value) {
             if (is_object($value)){
-                if ($value instanceof ObjectId)
-                    $data[$key] = (string)$value;
-                else{
-                    $data[$key] = $this->toArray($value);
+                switch ($value){
+                    case $value instanceof ObjectId:
+                        $data[$key] = (string)$value;
+                        break;
+                    //@todo 配置 时间项目
+                    case $value instanceof UTCDateTime:
+                        $data[$key] = $value->toDateTime()->setTimezone(new \DateTimeZone(date_default_timezone_get()))->format('Y-m-d H:i:s');
+                        break;
+                    default:
+                        $data[$key] = self::toArray($value);
+                        break;
                 }
             }else{
                 $data[$key] = $value;

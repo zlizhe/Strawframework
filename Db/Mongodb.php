@@ -173,7 +173,7 @@ class Mongodb{
     /**
      *  根据查询条件返回一条结果
      */
-    public function getOne($query = '', $field = []) : BSONDocument {
+    public function getOne($query = '', $field = []) {
 
         try{
 

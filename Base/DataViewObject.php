@@ -78,14 +78,20 @@ class DataViewObject {
      *
      * @throws \Exception
      */
-    public function __construct($scenes = 'default') {
+    public function __construct(? RequestObject $ro = null, ? array $filedRelation = [], string $scenes = 'default') {
         $this->_scenes = $scenes;
         //子类必须有 $dvoDocs 供后期静态绑定
         if (!isset(static::$dvoObject)){
-            throw new \Exception('Dvo child must has static dvoObject.');
+            throw new \Exception(sprintf('Dvo %s can not found static function dvoObject.', get_called_class()));
         }
+
+        //分析 Dvo 属性
         if (empty(static::$dvoObject))
             $this->analysis();
+
+        //转移Ro属性于Dvo
+        if ($ro)
+            $this->transferRo($ro, $filedRelation);
     }
 
 
@@ -128,8 +134,39 @@ class DataViewObject {
                 continue;
 
             if (!is_null($value))
-                $data[$key] = $this->{'get' . ucfirst($key)}();
+                $data[$key] = $this->{lcfirst($key)};
         }
         return $data;
+    }
+
+    /**
+     * 转移来自 Ro 的属性
+     * 字段关系支持 [title,id] 即 title 与 id 需要从 Ro 中转移至 Dvo 字段名称相同
+     * [title => dvTitle, id => id] 即 Ro title 转移至 Dvo dvTitle
+     * @param RequestObject $ro
+     * @param array|null    $filedRelation
+     */
+    private function transferRo(RequestObject $ro, ? array $filedRelation = []){
+        //@todo
+
+    }
+
+    /**
+     * 开始绑定属于至 :propName
+     * @param $query
+     */
+    public function _setBind($query){
+        //@todo
+
+    }
+
+
+    /**
+     * 为属性设置别名， 主要用于多个相同字段需要不同值时 设定该字段为别名
+     * @param $propName
+     * @param $alias
+     */
+    public function _setAlias($propName, $alias){
+
     }
 }
