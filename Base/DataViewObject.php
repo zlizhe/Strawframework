@@ -133,8 +133,16 @@ class DataViewObject {
             if ('_scenes' == $key)
                 continue;
 
-            if (!is_null($value))
-                $data[static::$dvoObject[$key]['name']] = $this->{lcfirst($key)};
+            if (!is_null($value)){
+
+                //alias
+                if ('_' == $key[0]){
+                    $data[$key] = $value;
+                }else{
+                    //取普通值
+                    $data[static::$dvoObject[$key]['name']] = $value;
+                }
+            }
         }
         return $data;
     }
@@ -176,7 +184,19 @@ class DataViewObject {
      * @param $propName
      * @param $alias
      */
-    public function _setAlias($propName, $alias){
+    public function _setAlias($propName, $alias, $value): DataViewObject{
 
+        if (!property_exists($this, $propName))
+            throw new \Exception(sprintf("Alias's property %s not found.", $propName));
+
+        $backUp = $this->{lcfirst($propName)};
+        //写入原字段
+        $this->{'set' . ucfirst($propName)}($value);
+        //读原字段 写 alias 字段 _ 开头
+        $this->{'_' . $alias} = $this->{lcfirst($propName)};
+        //写回备份 至 原字段
+        $this->{lcfirst($propName)} = $backUp;
+
+        return $this;
     }
 }

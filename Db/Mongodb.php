@@ -3,6 +3,7 @@ namespace Strawframework\Db;
 
 use MongoDB\BSON\ObjectId;
 use MongoDB\BSON\Regex;
+use MongoDB\Driver\Cursor;
 use MongoDB\InsertManyResult;
 use MongoDB\InsertOneResult;
 use MongoDB\Model\BSONDocument;
@@ -14,7 +15,7 @@ use Strawframework\Base\DataViewObject;
  * http://php.net/mongodb
  */
 
-class Mongodb{
+class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB\BSON\Persistable {
 
     //db obj
     private $db;
@@ -102,20 +103,6 @@ class Mongodb{
      */
     private function parseDVO($dvos, ? array $dataQuery = [], bool $genId = false): array {
 
-
-        //$a = preg_replace_callback_array(
-        //    [
-        //        '/[:.+]/' => function ($match) {
-        //            return 11;
-        //        }
-        //    ],
-        //    $dataQuery
-        //);
-        //var_dump($a);
-        //die;
-        //$dataKey = preg_grep("/[:.+]/", $dataQuery);
-        //var_dump($dataQuery, $dataKey);die;
-
         $dvoArr = [];
         if (!is_array($dvos))
             $dvoArr[0] = $dvos;
@@ -129,12 +116,16 @@ class Mongodb{
             if (!($dvo instanceof DataViewObject))
                 throw new \Exception(sprintf('Data %s must instance of DVO.', var_export($dvo, true)));
 
-
             $data[$key] = $dvo->getDvos();
             //_id 不存在时 手动写入
             if (true == $genId && !key_exists('_id', $data[$key]))
                 $data[$key]['_id'] = new ObjectId();
 
+            //绑定 data
+            if (!empty($dataQuery))
+                $data[$key] = $this->bindQuery($dataQuery, $data[$key]);
+
+            //解析特殊字
             $data[$key] = $this->parseQuery($data[$key]);
         }
         return is_array($dvos) ? $data : current($data);
@@ -226,7 +217,7 @@ class Mongodb{
      * @return mixed
      * @throws \Exception
      */
-    public function getAll($query = [], $field = [], $sort = [], $skip = 0, $limit = 0, $data = []) {
+    public function getAll($query = [], $field = [], $sort = [], $skip = 0, $limit = 0, $data = []): ? Cursor {
         try{
 
             if (!$this->collection)
@@ -247,7 +238,7 @@ class Mongodb{
 
             $res = $this->collection->find($query, $options);
 
-            var_dump($res);die;
+            //echo (json_encode(($res->toArray())));die;
             return $res;
         } catch (\Exception $e) {
             throw new \Exception(sprintf("Mongodb getAll error %s. - Last Query: %s", $e->getMessage(), $this->getLastSql()));
@@ -409,13 +400,65 @@ class Mongodb{
     }
 
     /**
+     * 开始绑定 :column
+     * @param array $query
+     * @param array $data
+     *
+     * @return array
+     * @throws \Exception
+     */
+    private function bindQuery(array $query, array $data): array{
+
+        $bindedData = [];
+
+        foreach ($query as $key => $value) {
+
+            if (is_array($value)){
+
+                $bindedData[$key] = $this->bindQuery($value, $data);
+            }else{
+                //是待绑定数据
+                if (':' == $value[0]){
+                    $k = substr($value, 1);
+                    if (!key_exists($k, $data))
+                        throw new \Exception(sprintf('Bind key %s not found in DVO.', $k));
+                    $bindedData[$key] = $data[$k];
+                }
+            }
+
+        }
+        return $bindedData;
+    }
+
+    /**
      * 解析 query 中的关键词  like 与 _id
      * @param $data
      *
      * @return mixed
      * @throws \Exception
      */
-    private function parseQuery($data){
+    private function parseQuery(array $data){
+
+        //绑定字段
+        //if (!empty($query)){
+        //    $data = preg_replace_callback(
+        //        '[\":\w+\"]',
+        //        function ($matches) use ($data) {
+        //            $k = substr($matches[0], 2, -1); //取到引号，让 replace 时 json 类型正确
+        //            if (!key_exists($k, $data))
+        //                throw new \Exception(sprintf('Bind key %s not found in DVO.', $k));
+        //
+        //            if (is_numeric($data[$k])){
+        //                return $data[$k];
+        //            }else{
+        //                return sprintf("\"%s\"", $data[$k]);
+        //            }
+        //        },
+        //        json_encode($query)
+        //    );
+        //}
+        //var_dump($data);die;
+
 
         foreach ($data as $key => $value) {
 
@@ -428,7 +471,7 @@ class Mongodb{
                 $data[$key] = new ObjectId($value);
             }
 
-            if (is_array($value) && count($value)){
+            if (is_array($value) && !empty($value)){
                 //包含 like
                 if (array_key_exists('$like', $value)){
                     $data[$key] = new Regex($value['$like'], 'i');
@@ -555,5 +598,36 @@ class Mongodb{
     {
         return $this->getLastSql();
     }
-}
 
+    public function jsonSerialize (){
+
+        return 'jsonser';
+    }
+
+    /**
+     * Provides an array or document to serialize as BSON
+     * Called during serialization of the object to BSON. The method must return an array or stdClass.
+     * Root documents (e.g. a MongoDB\BSON\Serializable passed to MongoDB\BSON\fromPHP()) will always be serialized as a BSON document.
+     * For field values, associative arrays and stdClass instances will be serialized as a BSON document and sequential arrays (i.e. sequential, numeric indexes starting at 0) will be serialized as a BSON array.
+     * @link http://php.net/manual/en/mongodb-bson-serializable.bsonserialize.php
+     * @return array|object An array or stdClass to be serialized as a BSON array or document.
+     */
+    public function bsonSerialize() {
+        echo 333;die;
+    }
+
+    /**
+     * Constructs the object from a BSON array or document
+     * Called during unserialization of the object from BSON.
+     * The properties of the BSON array or document will be passed to the method as an array.
+     * @link http://php.net/manual/en/mongodb-bson-unserializable.bsonunserialize.php
+     *
+     * @param array $data Properties within the BSON array or document.
+     */
+    public function bsonUnserialize(array $data) {
+        echo 'unser';
+        var_dump($data);
+        // TODO: Implement bsonUnserialize() method.
+    }
+
+}

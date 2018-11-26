@@ -280,15 +280,10 @@ class Model extends Straw implements Db {
 
         foreach ($data as $key => $value) {
             if (!isset($this->_modelData[$key])) {
-                $this->_modelData[$key] = $value ?: '';
+                $this->_modelData[$key] = $value ?? '';
             }
         }
     }
-
-    // public function field($field='*'){
-
-    // $this->find = $this->find;
-    // }
 
     /**
      * 根据条件查找一条
@@ -298,7 +293,7 @@ class Model extends Straw implements Db {
     public function getOne() {
         $this->_getConnect('read');
 
-        $this->_setCanEmpty(['query' => '', 'data' => '', 'field' => '', 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
+        $this->_setCanEmpty(['query' => [], 'data' => [], 'field' => '', 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
 
         if (!$this->_modelData['query'])
             throw new \Exception('Query is empty.');
@@ -334,10 +329,10 @@ class Model extends Straw implements Db {
      * 查询全部
      * @return array
      */
-    public function getAll() : array {
+    public function getAll() {
         $this->_getConnect('read');
 
-        $this->_setCanEmpty(['query' => '', 'data' => '', 'field' => '', 'order' => '', 'offset' => NULL, 'limit' => NULL, 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
+        $this->_setCanEmpty(['query' => [], 'data' => [], 'field' => '', 'order' => '', 'offset' => NULL, 'limit' => NULL, 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
 
         //自动生成 cachekey
         if (TRUE === $this->_modelData['cacheKey']) {
@@ -375,7 +370,7 @@ class Model extends Straw implements Db {
     public function count($countField = '1') {
         $this->_getConnect('read');
 
-        $this->_setCanEmpty(['query' => '', 'data' => '', 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
+        $this->_setCanEmpty(['query' => [], 'data' => [], 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
 
         //自动生成 cachekey
         if (TRUE === $this->_modelData['cacheKey']) {
@@ -413,7 +408,7 @@ class Model extends Straw implements Db {
     public function getCol($col = 0) {
         $this->_getConnect('read');
 
-        $this->_setCanEmpty(['query' => '', 'data' => '', 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
+        $this->_setCanEmpty(['query' => [], 'data' => [], 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
 
         //自动生成 cachekey
         if (TRUE === $this->_modelData['cacheKey']) {

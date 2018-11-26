@@ -13,7 +13,7 @@ interface Db{
      *
      * @return mixed
      */
-    public function insert(array $data, array $args = []);
+    public function insert($data, array $args = []);
 
     /**
      * 根据条件查找一条
