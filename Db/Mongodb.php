@@ -103,18 +103,18 @@ class Mongodb{
     private function parseDVO($dvos, ? array $dataQuery = [], bool $genId = false): array {
 
 
-        $a = preg_replace_callback_array(
-            [
-                '/[:.+]/' => function ($match) {
-                    return 11;
-                }
-            ],
-            $dataQuery
-        );
-        var_dump($a);
-        die;
-        $dataKey = preg_grep("/[:.+]/", $dataQuery);
-        var_dump($dataQuery, $dataKey);die;
+        //$a = preg_replace_callback_array(
+        //    [
+        //        '/[:.+]/' => function ($match) {
+        //            return 11;
+        //        }
+        //    ],
+        //    $dataQuery
+        //);
+        //var_dump($a);
+        //die;
+        //$dataKey = preg_grep("/[:.+]/", $dataQuery);
+        //var_dump($dataQuery, $dataKey);die;
 
         $dvoArr = [];
         if (!is_array($dvos))
