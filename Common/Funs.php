@@ -11,13 +11,14 @@ use Strawframework\Base\Error;
 class Funs {
     private static $instance;
 
-    public static function __callStatic($name, $arguments)
-    {
+    /**
+     * 获取
+     */
+    public static function getInstance(){
         if (!self::$instance)
             self::$instance = new self();
 
-
-        return self::$instance->{$name}(implode(',', $arguments));
+        return self::$instance;
     }
 
     /**
@@ -31,7 +32,7 @@ class Funs {
      * @return string
      * @throws Error
      */
-    protected function getUrl(string $url = '', string $method = "GET", $data = '', array $harr = [], $timeout = 60): string {
+    public function getUrl(string $url = '', string $method = "GET", $data = '', array $harr = [], $timeout = 60): string {
         if (is_array($data)) {
             $postdata = http_build_query($data);
         } else {
@@ -78,7 +79,7 @@ class Funs {
      *
      * @return string
      */
-    protected function crypt_encode($val, string $key): string {
+    public function crypt_encode($val, string $key): string {
         if (is_array($val)) {
             $val = json_encode($val);
         }
@@ -96,7 +97,7 @@ class Funs {
      *
      * @return string
      */
-    protected function crypt_decode(string $val, string $key): string {
+    public function crypt_decode(string $val, string $key): string {
         $iv = substr(hash('sha256', $key), 0, 16);
 
         return openssl_decrypt(hex2bin($val), "AES-256-CBC", $key, OPENSSL_RAW_DATA, $iv);
@@ -112,7 +113,7 @@ class Funs {
      * @return string
      * @throws \Error
      */
-    protected function encodeXml($data, string $encoding = 'UTF-8', string $mainname = 'StrawFramework'): string {
+    public function encodeXml($data, string $encoding = 'UTF-8', string $mainname = 'StrawFramework'): string {
         if (!is_array($data) || count($data) <= 0) {
             throw new \Error(sprintf('Data error %s', json_encode($data, JSON_UNESCAPED_UNICODE)));
         }
@@ -138,7 +139,7 @@ class Funs {
      *
      * @return bool|mixed
      */
-    protected function decodeXml(string $xml) {
+    public function decodeXml(string $xml) {
         if (!$xml || !xml_parse(xml_parser_create(), $xml, TRUE)) {
             return FALSE;
         }
@@ -157,7 +158,7 @@ class Funs {
      *
      * @return false|string
      */
-    protected function humDate(string $date, string $type = 'Y-m-d H:i') {
+    public function humDate(string $date, string $type = 'Y-m-d H:i') {
         //return date($type, $date);
         //分钟
         $second = date('YmdHi', $date);
@@ -202,7 +203,7 @@ class Funs {
      *
      * @return mixed
      */
-    protected function clientIp(int $type = 0, bool $adv = FALSE): string {
+    public function clientIp(int $type = 0, bool $adv = FALSE): string {
         $type = $type ? 1 : 0;
         static $ip = NULL;
         if ($ip !== NULL) {
@@ -237,7 +238,7 @@ class Funs {
      *
      * @return string
      */
-    protected function ip2Location(string $getIp): string {
+    public function ip2Location(string $getIp): string {
         if ($getIp == '127.0.0.1') {
             return '火星';
         }

@@ -100,7 +100,21 @@ class Mongodb{
      * @return array
      * @throws \Exception
      */
-    private function parseDVO($dvos, bool $genId = false): array {
+    private function parseDVO($dvos, ? array $dataQuery = [], bool $genId = false): array {
+
+
+        $a = preg_replace_callback_array(
+            [
+                '/[:.+]/' => function ($match) {
+                    return 11;
+                }
+            ],
+            $dataQuery
+        );
+        var_dump($a);
+        die;
+        $dataKey = preg_grep("/[:.+]/", $dataQuery);
+        var_dump($dataQuery, $dataKey);die;
 
         $dvoArr = [];
         if (!is_array($dvos))
@@ -127,7 +141,7 @@ class Mongodb{
     }
 
     //https://docs.mongodb.com/php-library/master/tutorial/crud/#insert-one-document
-    const INSERT_TYPE_ONe = 'insertOne';
+    const INSERT_TYPE_ONE = 'insertOne';
     //https://docs.mongodb.com/php-library/master/tutorial/crud/#insert-many-documents
     const INSERT_TYPE_MANY = 'insertMany';
 
@@ -152,9 +166,9 @@ class Mongodb{
                 //实现方式
                 $insertType = self::INSERT_TYPE_MANY;
             }else{
-                $insertType = self::INSERT_TYPE_ONe;
+                $insertType = self::INSERT_TYPE_ONE;
             }
-            $allData = $this->parseDVO($data, true);
+            $allData = $this->parseDVO($data, null, true);
 
             //记录查询语句
             $this->sqlQuery .= $this->collection . '.'.$insertType.'(';
@@ -169,11 +183,15 @@ class Mongodb{
         }
     }
 
-
     /**
      *  根据查询条件返回一条结果
+     * @param string $query
+     * @param array  $field
+     *
+     * @return BSONDocument|null
+     * @throws \Exception
      */
-    public function getOne($query = '', $field = []) {
+    public function getOne($query = '', $field = [], $data = []) :? BSONDocument {
 
         try{
 
@@ -181,19 +199,59 @@ class Mongodb{
                 throw new \Exception('Please set table first.');
 
             if (!empty($query))
-                $query = $this->parseDVO($query);
+                $query = $this->parseDVO($query, $data);
 
             //记录查询语句
             $this->sqlQuery = $this->collection . '.findOne(';
             $this->sqlQuery .= $query ? json_encode($query) : '{}';
 
-            if (!empty($field))
-                $options = $this->parseOptions($field);
+            $options = $this->parseOptions($field);
 
             $res = $this->collection->findOne($query, $options ?? []);
             return $res;
         } catch (\Exception $e){
             throw new \Exception(sprintf("Mongodb getOne error %s. - Last Query: %s", $e->getMessage(), $this->getLastSql()));
+        }
+    }
+
+    /**
+     * 查询所有结果 根据条件分类
+     * @param array $query
+     * @param array $field
+     * @param array $sort
+     * @param int   $skip
+     * @param int   $limit
+     * @param array $data
+     *
+     * @return mixed
+     * @throws \Exception
+     */
+    public function getAll($query = [], $field = [], $sort = [], $skip = 0, $limit = 0, $data = []) {
+        try{
+
+            if (!$this->collection)
+                throw new \Exception('Please set table first.');
+
+            //兼容 mysql 空字符串 转 空数组
+            if ($query == '')
+                $query = [];
+
+            if (!empty($query))
+                $query = $this->parseDVO($query, $data);
+
+            //记录查询语句
+            $this->sqlQuery = $this->collection . '.find(';
+            $this->sqlQuery .= $query ? json_encode($query) : '{}';
+
+            $options = $this->parseOptions($field, $limit, $sort, $skip);
+
+            $res = $this->collection->find($query, $options);
+
+            var_dump($res);die;
+            return $res;
+        } catch (\Exception $e) {
+            throw new \Exception(sprintf("Mongodb getAll error %s. - Last Query: %s", $e->getMessage(), $this->getLastSql()));
+
         }
     }
 
@@ -250,7 +308,7 @@ class Mongodb{
         if ('*' == $field)
             $field = [];
 
-        if (!is_array($field))
+        if ($field && !is_array($field))
             $field = [$field];
 
         $options = [];
@@ -383,41 +441,6 @@ class Mongodb{
         return $data;
     }
 
-    /**
-     * 查询所有结果 根据条件分类
-     */
-    public function getAll($query = [], $field = [], $sort = [], $skip = 0, $limit = 0, $data = '') : array {
-        if (!$this->collection)
-            ex('Collection not found');
-
-        //兼容 mysql 空字符串 转 空数组
-        if ($query == '')
-            $query = [];
-
-        if (!empty($query))
-            $query = $this->parseQuery($query);
-
-        //记录查询语句
-        $this->sqlQuery = $this->db.'.'.$this->collection . '.find(';
-        $this->sqlQuery .= $query ? json_encode($query) : '{}';
-
-//        var_dump($this->getOptions($field, $limit, $sort, $skip));die;
-        try{
-            $res = $this->connect->executeQuery(
-                $this->db.'.'.$this->collection,
-                new \Mongodb\Driver\Query($query, $this->getOptions($field, $limit, $sort, $skip))
-            )->toArray();
-            foreach ($res as $key => $value) {
-                $value->_id = (string)$value->_id;
-                $res[$key] = (array)$value;
-            }
-
-            return $res;
-        } catch (\Exception $e) {
-            ex("Mongodb Find Error", sprintf("%s ".PHP_EOL.'Last Query : %s', $e->getMessage(), $this->getLastSql()), 'DB Error');
-
-        }
-    }
 
     //更新的行数
     public $modifiedCount = 0;
@@ -523,6 +546,14 @@ class Mongodb{
         } catch (\Exception $e) {
             ex("Mongodb Delete Error", sprintf("%s ".PHP_EOL.'Last Query : %s', $e->getMessage(), $this->getLastSql()), 'DB Error');
         }
+    }
+
+    /**
+     * 调试使用
+     */
+    public function __debugInfo()
+    {
+        return $this->getLastSql();
     }
 }
 

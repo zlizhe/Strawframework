@@ -139,6 +139,11 @@ class Straw {
             }
         }
 
+        //如果取不到值 加 / 兼容 list /list
+        if (!$requestDocs[$a][$rMethod]){
+            $a = '/' . $a;
+        }
+
         if (FALSE == $requestDocs[$a][$rMethod]) {
             throw new \Exception(sprintf("Router error, can not found uri %s.", $a));
         }

@@ -61,9 +61,9 @@ class RequestObject{
      *
      * @return $this
      */
-    public function setRequired(?array $columns = []){
+    public function setRequired(?array $columns){
 
-        self::$requiredColumns = count($columns) > 0 ? $columns : null;
+        self::$requiredColumns = !empty($columns) ? $columns : null;
         return $this;
     }
 
@@ -223,5 +223,19 @@ class RequestObject{
      */
     public function getRequest(){
         return $this;
+    }
+
+    /**
+     * 获取子类 所有 Object
+     */
+    public function getRos():? array{
+
+        $data = [];
+        foreach ($this as $key => $value) {
+
+            if (!is_null($value))
+                $data[$key] = $this->{'get' . ucfirst($key)}();
+        }
+        return $data;
     }
 }

@@ -78,7 +78,7 @@ class DataViewObject {
      *
      * @throws \Exception
      */
-    public function __construct(? RequestObject $ro = null, ? array $filedRelation = [], string $scenes = 'default') {
+    public function __construct(? RequestObject $ro = null, $filedRelation = null, string $scenes = 'default') {
         $this->_scenes = $scenes;
         //子类必须有 $dvoDocs 供后期静态绑定
         if (!isset(static::$dvoObject)){
@@ -134,30 +134,40 @@ class DataViewObject {
                 continue;
 
             if (!is_null($value))
-                $data[$key] = $this->{lcfirst($key)};
+                $data[static::$dvoObject[$key]['name']] = $this->{lcfirst($key)};
         }
         return $data;
     }
 
     /**
      * 转移来自 Ro 的属性
-     * 字段关系支持 [title,id] 即 title 与 id 需要从 Ro 中转移至 Dvo 字段名称相同
-     * [title => dvTitle, id => id] 即 Ro title 转移至 Dvo dvTitle
+     * 字段关系支持 string title,id 即 title 与 id 需要从 Ro 中转移至 Dvo 字段名称相同
+     * array [title => dvTitle, id => id] 即 Ro title 转移至 Dvo dvTitle
      * @param RequestObject $ro
-     * @param array|null    $filedRelation
+     * @param array|string|null    $filedRelation
      */
-    private function transferRo(RequestObject $ro, ? array $filedRelation = []){
-        //@todo
+    private function transferRo(RequestObject $ro, $filedRelation = null): void{
+        $dvoKeys = [];
+        $roKeys = $ro->getRos();
+        if ($filedRelation){
+            //['rokey' => 'dvokey']
+            if (is_array($filedRelation)){
+                $dvoKeys = $filedRelation;
+            }else{
+                //key1,key2
+                $filedArr = explode(',', $filedRelation);
+                $dvoKeys = array_combine($filedArr, $filedArr);
+            }
+        }else{
+            $dvoKeys = array_combine(array_keys($roKeys), array_keys($roKeys));
+        }
 
-    }
-
-    /**
-     * 开始绑定属于至 :propName
-     * @param $query
-     */
-    public function _setBind($query){
-        //@todo
-
+        //设置 Dvo
+        foreach ($roKeys as $key => $value) {
+            if (property_exists($this, $dvoKeys[$key])){
+                $this->{'set' . ucfirst($dvoKeys[$key])}($value);
+            }
+        }
     }
 
 

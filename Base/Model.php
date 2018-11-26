@@ -194,16 +194,17 @@ class Model extends Straw implements Db {
 
         return $this;
     }
-    //
-    //// 连贯操作 绑定数据
-    //public function data(array $data): Model {
-    //
-    //    if (!empty($data)) {
-    //        $this->_modelData['data'] = $data;
-    //    }
-    //
-    //    return $this;
-    //}
+
+    // 连贯操作 绑定数据
+    // 开始绑定属性至 :propName
+    public function data(array $data): Model {
+
+        if (!empty($data)) {
+            $this->_modelData['data'] = $data;
+        }
+
+        return $this;
+    }
 
     // 连贯操作 需要查询的字段
     // * @param string|array $field  需要查询的字段,字符串或者数组

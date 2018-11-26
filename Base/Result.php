@@ -85,7 +85,7 @@ class Result implements \Strawframework\Protocol\Result {
     public function toXml(){
         $this->contentType = 'application/xml';
         $this->getHeader();
-        echo Funs::encodeXml($this->res, 'UTF-8');
+        echo Funs::getInstance()->encodeXml($this->res, 'UTF-8');
         exit();
     }
 
