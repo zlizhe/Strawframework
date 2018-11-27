@@ -180,7 +180,7 @@ class RequestObject{
             },
         ];
 
-        //不存在的转换直接按对象转换 @todo 测试
+        //不存在的转换直接返回本身
         if (!key_exists($type, $doConvert) /*&& $v instanceof \stdClass*/){
             return $v;
         }

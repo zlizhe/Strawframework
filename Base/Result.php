@@ -40,11 +40,11 @@ class Result implements \Strawframework\Protocol\Result {
      *
      * @param int         $code
      * @param null|string $msg
-     * @param array       $res
+     * @param array|object       $res
      *
      * @throws \Exception
      */
-    public function __construct(int $code, ? string $msg = null, ? array $res = [], $doReturn = false) {
+    public function __construct(int $code, ? string $msg = null, $res = [], $doReturn = false) {
 
         Straw::$config['output_type'] = strtolower(Straw::$config['output_type']);
         if (!in_array(Straw::$config['output_type'], self::CONTENT_TYPES))
@@ -85,6 +85,10 @@ class Result implements \Strawframework\Protocol\Result {
     public function toXml(){
         $this->contentType = 'application/xml';
         $this->getHeader();
+
+        if ($this->res['data'] instanceof DataViewObject){
+            $this->res['data'] = $this->res['data']->jsonSerialize();
+        }
         echo Funs::getInstance()->encodeXml($this->res, 'UTF-8');
         exit();
     }
@@ -109,6 +113,9 @@ class Result implements \Strawframework\Protocol\Result {
      * @param $res
      */
     public function toHtml(){
+        if ($this->res['data'] instanceof DataViewObject){
+            $this->res['data'] = $this->res['data']->jsonSerialize();
+        }
         $this->contentType = 'text/html';
         $this->getHeader();
         echo '<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />';

@@ -8,13 +8,16 @@
 namespace Strawframework\Base;
 
 
+use MongoDB\BSON\Persistable;
+use function MongoDB\BSON\toJSON;
+use function MongoDB\BSON\toPHP;
 use Strawframework\Common\Code;
 
 /**
  * Class DataViewObject
  * @package Strawframework\Base
  */
-class DataViewObject {
+class DataViewObject implements \JsonSerializable, Persistable {
     //类型
     const AVAILABLE_TYPE = ['int', 'float', 'string', 'bool', 'array', 'object'];
 
@@ -118,7 +121,7 @@ class DataViewObject {
             if (empty($name) || empty($type))
                 throw new \Exception(sprintf('Dvo column %s, %s invalid.', $clo, $method->getName()));
             else{
-                static::$dvoObject[$method->getName()] = ['name' => $name, 'type' => $type];
+                static::$dvoObject[$method->getName()] = ['name' => $name, 'type' => $type, 'propName' => $method->getName()];
             }
         }
     }
@@ -178,11 +181,14 @@ class DataViewObject {
         }
     }
 
-
     /**
      * 为属性设置别名， 主要用于多个相同字段需要不同值时 设定该字段为别名
      * @param $propName
      * @param $alias
+     * @param $value
+     *
+     * @return DataViewObject
+     * @throws \Exception
      */
     public function _setAlias($propName, $alias, $value): DataViewObject{
 
@@ -198,5 +204,60 @@ class DataViewObject {
         $this->{lcfirst($propName)} = $backUp;
 
         return $this;
+    }
+
+    /**
+     * Specify data which should be serialized to JSON.
+     *
+     * @link  http://php.net/manual/en/jsonserializable.jsonserialize.php
+     *
+     * @return mixed data which can be serialized by <b>json_encode</b>,
+     *               which is a value of any type other than a resource.
+     *
+     * @since 5.4.0
+     */
+    public function jsonSerialize()
+    {
+        $list = [];
+        foreach ($this as $key => $value) {
+            if ('_scenes' == $key)
+                continue;
+
+            //输出时 使用字段名 做为 key
+            if (!is_null($value))
+                $list[static::$dvoObject[$key]['name']] = $this->{'get' . ucfirst($key)}();
+        }
+        return $list;
+    }
+
+
+    /**
+     * 创建 Dvo 对象写入
+     * @return array|null|object
+     */
+    public function bsonSerialize()
+    {
+        return $this->getDvos();
+    }
+
+    /**
+     * 读取时 $data 写入 Dvo 对象
+     * Constructs the object from a BSON array or document
+     * Called during unserialization of the object from BSON.
+     * The properties of the BSON array or document will be passed to the method as an array.
+     * @link https://php.net/manual/en/mongodb-bson-unserializable.bsonunserialize.php
+     *
+     * @param array $data Properties within the BSON array or document.
+     */
+    public function bsonUnserialize(array $data)
+    {
+
+        $dvo = array_combine(
+            array_column(static::$dvoObject, 'name'), static::$dvoObject);
+
+        foreach ($data as $key => $value) {
+            if ($dvo[$key]['propName'])
+                $this->{$dvo[$key]['propName']} = $value;
+        }
     }
 }

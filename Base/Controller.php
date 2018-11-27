@@ -10,42 +10,21 @@ class Controller extends Straw {
 
     /**
      * 当前参数列表
+     * @var RequestObject
      */
     private $requests;
 
     /**
-     * 当前版本号
-     * @var string
+     * 模板 页面
+     * @var View
      */
-    protected $_Gver = '';
-
-    /**
-     * 网站设置
-     * 网站自身的设置相关 与配置等
-     * @var array
-     */
-    protected $_Gset = [];
-
-    /**
-     * 用户相关
-     * 用户自己登录的数组 为登录为 NULL
-     * @var array
-     */
-    protected $_Guser = [];
-
-    /**
-     * API 连接使用的 module urls
-     */
-    protected $_availableModules = [];
-
-    //模板 页面
     private $view = NULL;
 
-    public function __construct(bool $isView = TRUE) {
+    public function __construct() {
         parent::__construct();
         //
         ////当前程序版本
-        //$this->_Gver = '';//@todo version();
+        //$this->_Gver = '';//
         //
         ////read from config
         //$this->_availableModules = parent::$config['modules'];
@@ -95,6 +74,7 @@ class Controller extends Straw {
 
     /**
      * 返回当前请求的参数 Request object
+     * @return RequestObject
      */
     public function getRequests(): ? RequestObject{
         return $this->requests;
@@ -169,49 +149,21 @@ class Controller extends Straw {
      * @var Service
      */
     protected function getService(string $serviceName): Service{
-        return $this->getSingleInstance('\Service\\' . ucfirst($serviceName));
-    }
-
-    /**
-     * 载入model类
-     *
-     * @param string $mname model类名称,如果是空字符串,则需要有table参数,以产生一个model基类,对指定table做操作,如果mname非空,通常table和pre都应该为null
-     * @param string $table 对应的数据表名称
-     * @param string $pre   对应的数据表前置
-     * @param string $dbtag 对应的数据库配置标签
-     *
-     * @return object
-     */
-    public function loadM(string $mname, string $table = '', string $pre = '', string $dbtag = DEFAULT_DB): object {
-        static $models = array();
-        $mname = ucfirst($mname);
-        if ($mname === '') {
-            ex($mname . ' Model is not found');
-        }
-        if (isset($models[$mname])) {
-            if (!$this->$mname) {
-                $this->$mname = $models[$mname];
-            }
-
-            return $models[$mname];
-        }
-
-        $class = '\Models\\' . $mname;
-        $model = new $class($table, $pre, $dbtag);
-        $this->$mname = $model;
-        $models[$mname] = $model;
-
-        return $model;
+        return $this->getSingleInstance('\\Service\\' . ucfirst($serviceName));
     }
 
     //给模板赋值
     public function assign($data, $value): void {
+        if (!$this->view)
+            $this->view = $this->getSingleInstance('\\Strawframework\\Base\\View');
 
         $this->view->assign($data, $value);
     }
 
     //渲染页面或者  json
     public function display(string $tpl = '', bool $hasHeaderFooter = TRUE): void {
+        if (!$this->view)
+            $this->view = $this->getSingleInstance('\\Strawframework\\Base\\View');
 
         $this->view->display($tpl ?: CONTROLLER_NAME . DS . ACTION_NAME, $hasHeaderFooter);
     }

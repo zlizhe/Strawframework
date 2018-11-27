@@ -5,7 +5,8 @@ use MongoDB\BSON\ObjectId;
 use MongoDB\BSON\UTCDateTime;
 use MongoDB\InsertManyResult;
 use MongoDB\InsertOneResult;
-use MongoDB\Model\BSONDocument;
+use Strawframework\Db\Mongodb;
+use Strawframework\Db\Mysql;
 use Strawframework\Straw, Strawframework\Protocol\Db;
 
 /**
@@ -14,9 +15,12 @@ use Strawframework\Straw, Strawframework\Protocol\Db;
  * Class Model
  * @package library
  */
-class Model extends Straw implements Db {
+class Model extends Straw implements Db{
 
-    //当前数据库对象
+    /**
+     * 当前数据库对象
+     * @var Mongodb Mysql
+     */
     protected $db;
 
     //数据库名
@@ -245,6 +249,13 @@ class Model extends Straw implements Db {
         return $this;
     }
 
+    //添加其他选项
+    public function options($options): Model{
+        if (!empty($options))
+            $this->_modelData['options'] = $options;
+        return $this;
+    }
+
     // 连贯操作  cache key
     public function cache($cacheKey, ?int $exp = DEFAULT_CACHEEXPIRE ?? null): Model {
 
@@ -288,7 +299,6 @@ class Model extends Straw implements Db {
     /**
      * 根据条件查找一条
      * @return array
-     * @throws \Exception
      */
     public function getOne() {
         $this->_getConnect('read');
@@ -327,7 +337,7 @@ class Model extends Straw implements Db {
 
     /**
      * 查询全部
-     * @return array
+     * @var Mongodb | Mysql
      */
     public function getAll() {
         $this->_getConnect('read');
@@ -363,11 +373,13 @@ class Model extends Straw implements Db {
 
     /**
      * 取条数
+     * @var Mongodb | Mysql
      * @param string $countField
      *
-     * @return mixed
+     * @return int
+     * @throws \Exception
      */
-    public function count($countField = '1') {
+    public function count($countField = '*') {
         $this->_getConnect('read');
 
         $this->_setCanEmpty(['query' => [], 'data' => [], 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
@@ -399,43 +411,6 @@ class Model extends Straw implements Db {
         return $result;
     }
 
-    /**
-     * 取一个字段
-     * @param int $col
-     *
-     * @return mixed
-     */
-    public function getCol($col = 0) {
-        $this->_getConnect('read');
-
-        $this->_setCanEmpty(['query' => [], 'data' => [], 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
-
-        //自动生成 cachekey
-        if (TRUE === $this->_modelData['cacheKey']) {
-            $this->_modelData['cacheKey'] = md5($this->table . __METHOD__ . json_encode($this->_modelData['query']) . $col);
-        }
-        if ($this->_modelData['cacheKey']) {
-            //有缓存 数据优先使用
-            $cacheRes = json_decode(Cache::get($this->_modelData['cacheKey']), TRUE);
-            if ($cacheRes) {
-                //取到数据 清空条件
-                $this->_modelData = [];
-
-                return $cacheRes;
-            }
-        }
-
-        $result = $this->db->getCol($this->_modelData['query'], $col, $this->_modelData['data']);
-
-        if ($this->_modelData['cacheKey']) {
-            Cache::set($this->_modelData['cacheKey'], json_encode($result), $this->_modelData['exp']);
-        }
-
-        //取到数据 清空条件
-        $this->_modelData = [];
-
-        return $result;
-    }
 
     /**
      * 执行 SQL
@@ -533,6 +508,7 @@ class Model extends Straw implements Db {
         $result = $this->db->getAllField($table);
 
         //APP_DEBUG 关闭后  设置永久缓存
+        //@todo 写入缓存至 php 文件
         if (FALSE == APP_DEBUG) {
             Cache::set($cacheKey, json_encode($result), 60 * 60 * 24);
         }
@@ -544,11 +520,6 @@ class Model extends Straw implements Db {
     //获取查询语句调试
     public function getLastSql() {
         return $this->db->getLastSql();
-    }
-
-    //update 后 修改的行数
-    public function getModifiedCount() {
-        return $this->db->modifiedCount();
     }
 
 
@@ -626,4 +597,5 @@ class Model extends Straw implements Db {
         }
         return $data;
     }
+
 }

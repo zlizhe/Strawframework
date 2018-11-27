@@ -51,4 +51,10 @@ interface Db{
      *  @param $condition 删除条件 array()
      * */
     public function delete($condition);
+
+    /**
+     * 获取最新的查询  sql
+     * @return mixed
+     */
+    public function getLastSql();
 }

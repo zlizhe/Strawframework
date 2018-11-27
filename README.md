@@ -21,7 +21,7 @@ Wiki (https://github.com/zlizhe/strawframework/wiki)
 
 - [x] Router
 
-- [x] Log
+- [ ] Log
 
 - [x] Auto Doc
 
@@ -35,7 +35,11 @@ Wiki (https://github.com/zlizhe/strawframework/wiki)
 
 - [x] Logic
 
-- [ ] Data View Object
+- [x] Data View Object
+
+- [ ] Cache
+
+- [ ] Redis ORM
 
 - [ ] Model
 

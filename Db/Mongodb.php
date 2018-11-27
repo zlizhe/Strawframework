@@ -1,12 +1,18 @@
 <?php
 namespace Strawframework\Db;
 
+use function MongoDB\BSON\fromPHP;
 use MongoDB\BSON\ObjectId;
+use MongoDB\BSON\Persistable;
 use MongoDB\BSON\Regex;
+use function MongoDB\BSON\toJSON;
+use MongoDB\Collection;
 use MongoDB\Driver\Cursor;
 use MongoDB\InsertManyResult;
 use MongoDB\InsertOneResult;
 use MongoDB\Model\BSONDocument;
+use MongoDB\Operation\InsertMany;
+use MongoDB\Operation\InsertOne;
 use Strawframework\Base\DataViewObject;
 
 /**
@@ -15,15 +21,21 @@ use Strawframework\Base\DataViewObject;
  * http://php.net/mongodb
  */
 
-class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB\BSON\Persistable {
+class Mongodb {
 
     //db obj
     private $db;
 
-    //mongodb connect obj
+    /**
+     * Mongodb Connect object
+     * @var \MongoDB\Client
+     */
     private $connect;
 
-    //操作表
+    /**
+     * Mongodb 表对象
+     * @var \MongoDB\Collection
+     */
     private $collection = null;
 
 	//model 中执行的 sql
@@ -92,7 +104,6 @@ class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB
         return $this->sqlQuery;
     }
 
-
     /**
      * 解析 DVO
      * @param      $dvos
@@ -118,8 +129,9 @@ class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB
 
             $data[$key] = $dvo->getDvos();
             //_id 不存在时 手动写入
-            if (true == $genId && !key_exists('_id', $data[$key]))
+            if (true == $genId && !key_exists('_id', $data[$key])){
                 $data[$key]['_id'] = new ObjectId();
+            }
 
             //绑定 data
             if (!empty($dataQuery))
@@ -130,6 +142,7 @@ class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB
         }
         return is_array($dvos) ? $data : current($data);
     }
+
 
     //https://docs.mongodb.com/php-library/master/tutorial/crud/#insert-one-document
     const INSERT_TYPE_ONE = 'insertOne';
@@ -159,15 +172,20 @@ class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB
             }else{
                 $insertType = self::INSERT_TYPE_ONE;
             }
-            $allData = $this->parseDVO($data, null, true);
+            //var_dump($data);die;
+            //var_dump(toJSON(fromPHP($this)));die;
 
             //记录查询语句
-            $this->sqlQuery .= $this->collection . '.'.$insertType.'(';
-            $this->sqlQuery .= $allData ? json_encode($allData) : '{}';
-            $this->sqlQuery .= ')';
+            if (TRUE == APP_DEBUG){
+                $allData = $this->parseDVO($data, null, false);
+                $this->sqlQuery .= $this->collection . '.'.$insertType.'(';
+                $this->sqlQuery .= $allData ? json_encode($allData) : '{}';
+                $this->sqlQuery .= ')';
+            }
 
 
-            $insertData = $this->collection->{$insertType}($allData, $options);
+            /* @var InsertMany | InsertOne */
+            $insertData = $this->collection->{$insertType}($data, $options);
             return $insertData;
         } catch (\Exception $e) {
             throw new \Exception(sprintf("Mongodb insert error %s. - Last Query: %s", $e->getMessage(), $this->getLastSql()));
@@ -178,11 +196,12 @@ class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB
      *  根据查询条件返回一条结果
      * @param string $query
      * @param array  $field
+     * @param array  $data
      *
-     * @return BSONDocument|null
+     * @return object|null
      * @throws \Exception
      */
-    public function getOne($query = '', $field = [], $data = []) :? BSONDocument {
+    public function getOne($query = '', $field = [], $data = []) :? object {
 
         try{
 
@@ -193,8 +212,10 @@ class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB
                 $query = $this->parseDVO($query, $data);
 
             //记录查询语句
-            $this->sqlQuery = $this->collection . '.findOne(';
-            $this->sqlQuery .= $query ? json_encode($query) : '{}';
+            if (TRUE == APP_DEBUG){
+                $this->sqlQuery = $this->collection . '.findOne(';
+                $this->sqlQuery .= $query ? json_encode($query) : '{}';
+            }
 
             $options = $this->parseOptions($field);
 
@@ -217,7 +238,7 @@ class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB
      * @return mixed
      * @throws \Exception
      */
-    public function getAll($query = [], $field = [], $sort = [], $skip = 0, $limit = 0, $data = []): ? Cursor {
+    public function getAll($query = [], $field = [], $sort = [], $skip = 0, $limit = 0, $data = []): ? array {
         try{
 
             if (!$this->collection)
@@ -231,15 +252,17 @@ class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB
                 $query = $this->parseDVO($query, $data);
 
             //记录查询语句
-            $this->sqlQuery = $this->collection . '.find(';
-            $this->sqlQuery .= $query ? json_encode($query) : '{}';
+            if (TRUE == APP_DEBUG){
+                $this->sqlQuery = $this->collection . '.find(';
+                $this->sqlQuery .= $query ? json_encode($query) : '{}';
+            }
 
             $options = $this->parseOptions($field, $limit, $sort, $skip);
 
             $res = $this->collection->find($query, $options);
 
             //echo (json_encode(($res->toArray())));die;
-            return $res;
+            return $res->toArray();
         } catch (\Exception $e) {
             throw new \Exception(sprintf("Mongodb getAll error %s. - Last Query: %s", $e->getMessage(), $this->getLastSql()));
 
@@ -247,41 +270,36 @@ class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB
     }
 
     /**
-     *  获取一行 一个字段
+     * 统计文档数量 (统计其他字段转发至 aggregate)
+     * @param array  $query
+     * @param string $countField
+     * @param array  $data
+     *
+     * @return int
+     * @throws \Exception
      */
-    public function getCol($query, $col, $data = ''){
-        return $this->getOne($query, $col)[$col];
-    }
-
-    /**
-     * 统计数量
-     * @param       $query
-     * @param array $field
-     */
-    public function count($query, $countField='', $data = ''){
-
-        if (!$this->collection)
-            ex('Collection not found');
-
-        //记录查询语句
-        $this->sqlQuery = $this->db.'.'.$this->collection . '.find(';
-        $this->sqlQuery .= $query ? json_encode($query) : '';
-        $this->sqlQuery .= ').count()';
-
-        if (!empty($query))
-            $query = $this->parseQuery($query);
+    public function count($query = [], $countField = '', $data = []): int{
 
         try{
+            if (!$this->collection)
+                throw new \Exception('Please set table first.');
 
-            $commands = [
-                'count' => $this->collection,
-                'query' => $query
-            ];
-            $result = $this->connect->executeCommand($this->db, new \MongoDB\Driver\Command($commands))->toArray();
+            //记录查询语句
+            if (TRUE == APP_DEBUG){
+                $this->sqlQuery = $this->db.'.'.$this->collection . '.find(';
+                $this->sqlQuery .= $query ? json_encode($query) : '';
+                $this->sqlQuery .= ').count()';
+            }
 
-            return $result[0]->n ?: 0;
+            if (!empty($query))
+                $query = $this->parseDVO($query, $data);
+
+
+            $res = $this->collection->countDocuments($query);
+
+            return $res;
         } catch (\Exception $e){
-            ex("Mongodb Count Error", sprintf("%s ".PHP_EOL.'Last Query : %s', $e->getMessage(), $this->getLastSql()), 'DB Error');
+            throw new \Exception(sprintf("Mongodb count error %s. - Last Query: %s", $e->getMessage(), $this->getLastSql()));
         }
     }
 
@@ -308,10 +326,10 @@ class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB
             $falseField = [];
             foreach($field as $key => $value){
                 if (false != $value){
-                    $newField['projection'][$value] = 1;
+                    $newField[$key] = 1;
                 }else{
                     //如果有 false
-                    $falseField['projection'][$key] = 0;
+                    $falseField[$key] = 0;
                 }
             }
             //if (empty($falseField)){
@@ -319,15 +337,16 @@ class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB
             //}else{
             //    $options = $falseField;
             //}
-            $options['projection'] = array_merge($newField['projection'], $falseField['projection']);
+            $options['projection'] = array_merge($newField, $falseField);
 
             //field 语句记录
-            if(count($newField)) {
+            if(!empty($options['projection']) && TRUE == APP_DEBUG) {
                 $this->sqlQuery  .=  $field ? ', '.json_encode(array_values($options)[0]) : ', {}';
             }
         }
 
-        $this->sqlQuery  .=  ')';
+        if (TRUE == APP_DEBUG)
+            $this->sqlQuery  .=  ')';
 
         //如果设置了 order => direction 搜索值 desc / asc to  -1 / 1
         if (!empty($sort)){
@@ -337,17 +356,20 @@ class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB
         }
         if ($sort){
             $options['sort'] = $sort;
-            $this->sqlQuery .= '.sort('.json_encode($sort).')';
+            if (TRUE == APP_DEBUG)
+                $this->sqlQuery .= '.sort('.json_encode($sort).')';
         }
 
         if ($skip){
             $options['skip'] = $skip;
-            $this->sqlQuery .= '.skip('.intval($skip).')';
+            if (TRUE == APP_DEBUG)
+                $this->sqlQuery .= '.skip('.intval($skip).')';
         }
 
         if ($limit){
             $options['limit'] = $limit;
-            $this->sqlQuery .= '.limit('.intval($limit).')';
+            if (TRUE == APP_DEBUG)
+                $this->sqlQuery .= '.limit('.intval($limit).')';
         }
 
 //        echo "<pre>";
@@ -381,9 +403,11 @@ class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB
         array_push($pipeline, ['$group' => ['_id' => '$'.$group.'', 'n' => ['$'.$fun.'' => $param == 1 ? 1 : '$'.$param.'']]]);
 
         //记录查询语句
-        $this->sqlQuery = $this->db.'.'.$this->collection . '.aggregate(';
-        $this->sqlQuery .= json_encode($pipeline);
-        $this->sqlQuery .= ')';
+        if (TRUE == APP_DEBUG){
+            $this->sqlQuery = $this->db.'.'.$this->collection . '.aggregate(';
+            $this->sqlQuery .= json_encode($pipeline);
+            $this->sqlQuery .= ')';
+        }
 
         try{
 
@@ -408,6 +432,20 @@ class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB
      * @throws \Exception
      */
     private function bindQuery(array $query, array $data): array{
+        //
+        ////绑定字段
+        //$data = (preg_replace_callback(
+        //    '[\":\w+\"]',
+        //    function ($matches) use ($data) {
+        //        $k = substr($matches[0], 2, -1); //取到引号，让 replace 时 json 类型正确
+        //        if (!key_exists($k, $data))
+        //            throw new \Exception(sprintf('Bind key %s not found in DVO.', $k));
+        //        return RequestObject::convert($data[$k], $data[]);
+        //    },
+        //    serialize($query)
+        //));
+        //var_dump($data);die;
+
 
         $bindedData = [];
 
@@ -438,27 +476,6 @@ class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB
      * @throws \Exception
      */
     private function parseQuery(array $data){
-
-        //绑定字段
-        //if (!empty($query)){
-        //    $data = preg_replace_callback(
-        //        '[\":\w+\"]',
-        //        function ($matches) use ($data) {
-        //            $k = substr($matches[0], 2, -1); //取到引号，让 replace 时 json 类型正确
-        //            if (!key_exists($k, $data))
-        //                throw new \Exception(sprintf('Bind key %s not found in DVO.', $k));
-        //
-        //            if (is_numeric($data[$k])){
-        //                return $data[$k];
-        //            }else{
-        //                return sprintf("\"%s\"", $data[$k]);
-        //            }
-        //        },
-        //        json_encode($query)
-        //    );
-        //}
-        //var_dump($data);die;
-
 
         foreach ($data as $key => $value) {
 
@@ -542,9 +559,11 @@ class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB
             }
 
             //记录查询语句
-            $this->sqlQuery .= $this->db.'.'.$this->collection . '.updateMany(';
-            $this->sqlQuery .= $condition ? json_encode($condition) : '{}';
-            $this->sqlQuery .= ',' . json_encode($updateQuery) . ', ' . json_encode(['multi' => true, 'upsert' => $args['upsert'] ? true : false]) . ')';
+            if (TRUE == APP_DEBUG){
+                $this->sqlQuery .= $this->db.'.'.$this->collection . '.updateMany(';
+                $this->sqlQuery .= $condition ? json_encode($condition) : '{}';
+                $this->sqlQuery .= ',' . json_encode($updateQuery) . ', ' . json_encode(['multi' => true, 'upsert' => $args['upsert'] ? true : false]) . ')';
+            }
 
             unset($allData, $condition, $data);
             $reData = $this->connect->executeBulkWrite($this->db.'.'.$this->collection, $bulk);
@@ -582,7 +601,9 @@ class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB
             $_id = $bulk->delete($condition);
 
             //记录查询语句
-            $this->sqlQuery .= $this->db.'.'.$this->collection . '.remove('.json_encode($condition).')';
+            if (TRUE == APP_DEBUG){
+                $this->sqlQuery .= $this->db.'.'.$this->collection . '.remove('.json_encode($condition).')';
+            }
 
             $data = $this->connect->executeBulkWrite($this->db.'.'.$this->collection, $bulk);
             return $data->getDeletedCount() ?: false;
@@ -594,40 +615,9 @@ class Mongodb implements \MongoDB\BSON\Serializable, \JsonSerializable, \MongoDB
     /**
      * 调试使用
      */
-    public function __debugInfo()
-    {
-        return $this->getLastSql();
-    }
-
-    public function jsonSerialize (){
-
-        return 'jsonser';
-    }
-
-    /**
-     * Provides an array or document to serialize as BSON
-     * Called during serialization of the object to BSON. The method must return an array or stdClass.
-     * Root documents (e.g. a MongoDB\BSON\Serializable passed to MongoDB\BSON\fromPHP()) will always be serialized as a BSON document.
-     * For field values, associative arrays and stdClass instances will be serialized as a BSON document and sequential arrays (i.e. sequential, numeric indexes starting at 0) will be serialized as a BSON array.
-     * @link http://php.net/manual/en/mongodb-bson-serializable.bsonserialize.php
-     * @return array|object An array or stdClass to be serialized as a BSON array or document.
-     */
-    public function bsonSerialize() {
-        echo 333;die;
-    }
-
-    /**
-     * Constructs the object from a BSON array or document
-     * Called during unserialization of the object from BSON.
-     * The properties of the BSON array or document will be passed to the method as an array.
-     * @link http://php.net/manual/en/mongodb-bson-unserializable.bsonunserialize.php
-     *
-     * @param array $data Properties within the BSON array or document.
-     */
-    public function bsonUnserialize(array $data) {
-        echo 'unser';
-        var_dump($data);
-        // TODO: Implement bsonUnserialize() method.
-    }
+    //public function __debugInfo()
+    //{
+    //    return ['lastSql' => $this->getLastSql()];
+    //}
 
 }
