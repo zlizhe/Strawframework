@@ -1,5 +1,6 @@
 <?php
 namespace Strawframework;
+use Strawframework\Base\Container;
 use Strawframework\Factory\RequestFactory;
 
 /**
@@ -15,6 +16,8 @@ class Straw {
 
     public function __construct() {
 
+        if (null == self::$container)
+            self::$container = new Container();
     }
 
     /**
@@ -136,6 +139,11 @@ class Straw {
             }
         }
 
+        //如果取不到值 加 / 兼容 list /list
+        if (!$requestDocs[$a][$rMethod]){
+            $a = '/' . $a;
+        }
+
         if (FALSE == $requestDocs[$a][$rMethod]) {
             throw new \Exception(sprintf("Router error, can not found uri %s.", $a));
         }
@@ -173,5 +181,17 @@ class Straw {
             define("VERSION_NAME", $v);
     }
 
+    protected static $container = null;
+
+    /**
+     * 获取一个实例
+     */
+    protected function getSingleInstance($instance){
+
+        if (!isset(self::$container->$instance))
+            self::$container->$instance = new $instance;
+
+        return self::$container->$instance;
+    }
 }
 

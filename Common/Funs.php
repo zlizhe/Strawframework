@@ -9,15 +9,16 @@ use Strawframework\Base\Error;
  * @package Strawframework\Common
  */
 class Funs {
-    private static $me;
+    private static $instance;
+
     /**
      * 获取
      */
     public static function getInstance(){
-        if (!self::$me)
-            self::$me = new self();
+        if (!self::$instance)
+            self::$instance = new self();
 
-        return self::$me;
+        return self::$instance;
     }
 
     /**
@@ -104,6 +105,28 @@ class Funs {
 
 
     /**
+     * 构建 xml 子类
+     * @param $data
+     *
+     * @return string
+     */
+    private function encodeXmlChild($data){
+        $xml = '';
+        foreach ($data as $key => $val) {
+            if (is_array($val)){
+                $xml .= "<" . $key . ">" . $this->encodeXmlChild($val) . "</" . $key . ">";
+            }else{
+                if (is_numeric($val)) {
+                    $xml .= "<" . $key . ">" . $val . "</" . $key . ">";
+                } else {
+                    $xml .= "<" . $key . ">" . $val . "</" . $key . ">";
+                }
+            }
+        }
+        return $xml;
+    }
+
+    /**
      * 构建 xml
      * @param        $data
      * @param string $encoding
@@ -119,13 +142,7 @@ class Funs {
 
         $xml = "<?xml version=\"1.0\" encoding=\"$encoding\" ?>";
         $xml .= "<$mainname>";
-        foreach ($data as $key => $val) {
-            if (is_numeric($val)) {
-                $xml .= "<" . $key . ">" . $val . "</" . $key . ">";
-            } else {
-                $xml .= "<" . $key . ">" . $val . "</" . $key . ">";
-            }
-        }
+        $xml .= $this->encodeXmlChild($data);
         $xml .= "</$mainname>";
 
         return $xml;

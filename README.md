@@ -21,11 +21,25 @@ Wiki (https://github.com/zlizhe/strawframework/wiki)
 
 - [x] Router
 
+- [ ] Log
+
+- [x] Auto Doc
+
+- [x] Error
+
+- [x] Output JSON TEXT XML 支持配置
+
 - [x] Request Object
 
-- [ ] Service
+- [x] Service
 
-- [ ] Logic
+- [x] Logic
+
+- [x] Data View Object
+
+- [ ] Cache
+
+- [ ] Redis ORM
 
 - [ ] Model
 
@@ -33,9 +47,7 @@ Wiki (https://github.com/zlizhe/strawframework/wiki)
 
 - [ ] Mongodb Library
 
-- [ ] Data View Object
-
-- [ ] Input Output 分别支持 JSON TEXT XML 支持配置
+- [ ] Input 支持 JSON TEXT XML 支持配置
 
 
 ## Router Controller

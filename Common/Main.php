@@ -1,6 +1,7 @@
 <?php
 namespace Strawframework\Common;
 
+use Strawframework\Base\Result;
 use Strawframework\Straw;
 
 final class Main{
@@ -30,7 +31,13 @@ final class Main{
         return $this;
     }
 
-    //configure Strawframework
+    /**
+     * configure Strawframework
+     * @method Straw loadConfig()
+     * @param string $boot
+     *
+     * @return Straw
+     */
     public function configure(string $boot) : Straw {
         //源码目录
         define("PROTECTED_PATH", ROOT_PATH . 'Protected' . DS);
@@ -67,9 +74,6 @@ final class Main{
         //date_default_timezone_set('Asia/Shanghai');
         @ini_set('date.timezone', 'Asia/Shanghai');
 
-        //header('Cache-control: private');
-        //header('Content-type: text/html; charset=utf-8');
-
         //runtime
         define('RUNTIME_PATH', PROTECTED_PATH . 'Runtime' . DS);
         //logs path
@@ -90,38 +94,51 @@ final class Main{
         //    $dotenv->load();
         //}catch(\Exception $e){}
 
-        // 系统函数
-        include(LIBRARY_PATH . 'Base' . DS . 'functions.php');
-        //if (file_exists(PROTECTED_PATH . 'functions.php')) // 用户函数
-        //    include(PROTECTED_PATH . 'functions.php');
-
         require_once(LIBRARY_PATH . 'Straw.php');
+        header(sprintf('X-Powered-By: Strawframework/%s', Straw::version()));
 
-
-        ////允许携带 cookie
-        //header("Access-Control-Allow-Credentials: true");
-        //unset($siteDomain);
         spl_autoload_register(function (string $class): void {
              //echo $fileName;
              //echo "<br/>";
-            Main::import($class, [
-                'Controller', 'Error', 'Lang', 'Result', 'Ro', 'Common'
-            ]);
+            Main::import($class);
         });
 
+        //Fatal error 统一处理
+        set_error_handler(function($errno, $errstr, $errfile, $errline){
+            //Fatal error
+            if (E_ERROR == $errno){
+                return new Result(Code::SERVER_ERROR, $errstr, [
+                    '_error_level' => 'Server Error!',
+                    '_error_file' => $errfile . '; Line: ' . $errline
+                ]);
+            }
+
+            //warning
+            if (E_WARNING == $errno){
+                return new Result(Code::SERVER_ERROR, $errstr, [
+                    '_error_level' => 'Server Warning!',
+                    '_error_file' => $errfile . '; Line: ' . $errline
+                ]);
+            }
+            //var_dump($errno, $errstr, $errfile);
+            return true;
+        }, E_ALL & ~ E_NOTICE);
         //throw error 错误统一处理
         set_exception_handler(function($exception){
             // System \Exception 不显示具体错误信息
-            //if (0 == $exception->getCode()){
-            //
-            //}else{
-            //
-            //}
-            //
-            //echo "<pre>";
-            //print_r($exception->getCode());die;
-            ex($exception);
+            if (FALSE == APP_DEBUG && 0 == $exception->getCode()){
+                return new Result(Code::FAIL, 'An error has occurred.');
+            }
+            $res = [
+                'error_code' => $exception->getCode()
+            ];
+            if (true == APP_DEBUG){
+                $res['_debug_throw'] = $exception->getFile() . '; Line:' . $exception->getLine();
+                $res['_debug_trace'] = $exception->getTrace();
+            }
+            return new Result(Code::FAIL, $exception->getMessage(), $res);
         });
+
         session_start();
 
         $boot = "\\Strawframework\\" . $boot;

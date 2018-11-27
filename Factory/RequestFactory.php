@@ -39,9 +39,9 @@ class RequestFactory{
             preg_match('/@Column\s*\(name=[\'|\"](.*)[\'|\"]\s*,\s*type=[\'|\"]('.implode('|', RequestObject::AVAILABLE_TYPE).')[\'|\"]\)/i', $requestDoc, $requestRouter);
 
             //参数 名称 / 类型
-            list($requet, $name, $type) = $requestRouter;
+            list($req, $name, $type) = $requestRouter;
             if (empty($name) || empty($type))
-                throw new \Exception(sprintf('Requests %s, %s invalid.', $request, $method->getName()));
+                throw new \Exception(sprintf('Requests %s, %s invalid.', $req, $method->getName()));
             else{
                 $requestDocs[$method->getName()] = ['name' => $name, 'type' => $type];
             }

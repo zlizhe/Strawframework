@@ -1,13 +1,18 @@
 <?php
+namespace Strawframework\Base;
+use Strawframework\Straw;
+
 /**
- * User: Zack Lee
- * Date: 2018/11/17
- * Time: 22:07
+ * Logic base
  */
 
-namespace Strawframework\Base;
 
 
-class Logic {
-
+class Logic extends Straw {
+    /**
+     * 获取Model
+     */
+    protected function getModel(string $modelName): Model{
+        return $this->getSingleInstance('\\Model\\' . ucfirst($modelName));
+    }
 }
