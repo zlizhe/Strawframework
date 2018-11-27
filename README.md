@@ -45,7 +45,7 @@ Wiki (https://github.com/zlizhe/strawframework/wiki)
 
 - [ ] Mysql ORM
 
-- [ ] Mongodb Library
+- [x] Mongodb Library
 
 - [ ] Input 支持 JSON TEXT XML 支持配置
 
