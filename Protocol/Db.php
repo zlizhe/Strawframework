@@ -9,11 +9,10 @@ interface Db{
     /**
      *  写入新数据
      * @param array $data
-     * @param array $args
      *
      * @return mixed
      */
-    public function insert($data, array $args = []);
+    public function insert($data);
 
     /**
      * 根据条件查找一条

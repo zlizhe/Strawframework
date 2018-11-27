@@ -74,7 +74,6 @@ class Controller extends Straw {
 
     /**
      * 返回当前请求的参数 Request object
-     * @return RequestObject
      */
     public function getRequests(): ? RequestObject{
         return $this->requests;

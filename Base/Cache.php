@@ -1,14 +1,7 @@
 <?php
-
 namespace Strawframework\Base;
 
 use Strawframework\Straw;
-
-/**
- * User: zl
- * Date: 2015/11/10
- * Time: 16:13
- */
 
 /**
  * cache 基类

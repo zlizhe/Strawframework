@@ -3,8 +3,10 @@ namespace Strawframework\Base;
 
 use MongoDB\BSON\ObjectId;
 use MongoDB\BSON\UTCDateTime;
+use MongoDB\DeleteResult;
 use MongoDB\InsertManyResult;
 use MongoDB\InsertOneResult;
+use MongoDB\UpdateResult;
 use Strawframework\Db\Mongodb;
 use Strawframework\Db\Mysql;
 use Strawframework\Straw, Strawframework\Protocol\Db;
@@ -19,7 +21,7 @@ class Model extends Straw implements Db{
 
     /**
      * 当前数据库对象
-     * @var Mongodb Mysql
+     * @var Mongodb | Mysql
      */
     protected $db;
 
@@ -250,7 +252,7 @@ class Model extends Straw implements Db{
     }
 
     //添加其他选项
-    public function options($options): Model{
+    public function options(array $options): Model{
         if (!empty($options))
             $this->_modelData['options'] = $options;
         return $this;
@@ -272,20 +274,6 @@ class Model extends Straw implements Db{
     }
 
 
-    /**
-     * 写入新数据 $data
-     * @param array | object $data
-     * @param array $args
-     *
-     * @return InsertOneResult | InsertManyResult
-     * @throws \Exception
-     */
-    public function insert($data, array $args = []) {
-        $this->_getConnect('write');
-
-        return $this->db->insert($data, $args);
-    }
-
     //为可空字段赋值
     private function _setCanEmpty(array $data): void {
 
@@ -297,20 +285,39 @@ class Model extends Straw implements Db{
     }
 
     /**
+     * 写入新数据 $data
+     * @param array | object $data
+     * @param array $args
+     *
+     * @return InsertOneResult | InsertManyResult
+     * @throws \Exception
+     */
+    public function insert($data) {
+        $this->_getConnect('write');
+        $this->_setCanEmpty(['options' => []]);
+
+        $result = $this->db->insert($data, $this->_modelData['options']);
+        //取到数据 清空条件
+        $this->_modelData = [];
+
+        return $result;
+    }
+
+    /**
      * 根据条件查找一条
-     * @return array
+     * @return array|mixed|object|null
      */
     public function getOne() {
         $this->_getConnect('read');
 
-        $this->_setCanEmpty(['query' => [], 'data' => [], 'field' => '', 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
+        $this->_setCanEmpty(['query' => [], 'data' => [], 'options' => [], 'field' => '', 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
 
         if (!$this->_modelData['query'])
             throw new \Exception('Query is empty.');
 
         //自动生成 cachekey
         if (TRUE === $this->_modelData['cacheKey']) {
-            $this->_modelData['cacheKey'] = md5($this->table . __METHOD__ . json_encode($this->_modelData['query']) . json_encode($this->_modelData['field']));
+            $this->_modelData['cacheKey'] = md5($this->table . __METHOD__ . json_encode($this->_modelData));
         }
         if ($this->_modelData['cacheKey']) {
             //有缓存 数据优先使用
@@ -323,7 +330,7 @@ class Model extends Straw implements Db{
             }
         }
 
-        $result = $this->db->getOne($this->_modelData['query'], $this->_modelData['field'], $this->_modelData['data']);
+        $result = $this->db->getOne($this->_modelData['query'], $this->_modelData['field'], $this->_modelData['data'], $this->_modelData['options']);
 
         if ($this->_modelData['cacheKey']) {
             Cache::set($this->_modelData['cacheKey'], json_encode($result), $this->_modelData['exp']);
@@ -342,7 +349,7 @@ class Model extends Straw implements Db{
     public function getAll() {
         $this->_getConnect('read');
 
-        $this->_setCanEmpty(['query' => [], 'data' => [], 'field' => '', 'order' => '', 'offset' => NULL, 'limit' => NULL, 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
+        $this->_setCanEmpty(['query' => [], 'data' => [], 'options' => [], 'field' => '', 'order' => '', 'offset' => NULL, 'limit' => NULL, 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
 
         //自动生成 cachekey
         if (TRUE === $this->_modelData['cacheKey']) {
@@ -359,7 +366,7 @@ class Model extends Straw implements Db{
             }
         }
 
-        $result = $this->db->getAll($this->_modelData['query'], $this->_modelData['field'], $this->_modelData['order'], $this->_modelData['offset'], $this->_modelData['limit'], $this->_modelData['data']);
+        $result = $this->db->getAll($this->_modelData['query'], $this->_modelData['field'], $this->_modelData['order'], $this->_modelData['offset'], $this->_modelData['limit'], $this->_modelData['data'], $this->_modelData['options']);
 
         if ($this->_modelData['cacheKey']) {
             Cache::set($this->_modelData['cacheKey'], json_encode($result), $this->_modelData['exp']);
@@ -377,12 +384,11 @@ class Model extends Straw implements Db{
      * @param string $countField
      *
      * @return int
-     * @throws \Exception
      */
     public function count($countField = '*') {
         $this->_getConnect('read');
 
-        $this->_setCanEmpty(['query' => [], 'data' => [], 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
+        $this->_setCanEmpty(['query' => [], 'data' => [], 'options' => [], 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
 
         //自动生成 cachekey
         if (TRUE === $this->_modelData['cacheKey']) {
@@ -399,7 +405,7 @@ class Model extends Straw implements Db{
             }
         }
 
-        $result = $this->db->count($this->_modelData['query'], $countField, $this->_modelData['data']);
+        $result = $this->db->count($this->_modelData['query'], $countField, $this->_modelData['data'], $this->_modelData['options']);
 
         if ($this->_modelData['cacheKey']) {
             Cache::set($this->_modelData['cacheKey'], json_encode($result), $this->_modelData['exp']);
@@ -410,6 +416,59 @@ class Model extends Straw implements Db{
 
         return $result;
     }
+
+
+
+    /**
+     * 更新数据
+     * @param array|object $setData 待更新数据
+     * @param array|object $criteria 更新条件
+     * @param string $cacheKey
+     * @var Mongodb | Mysql
+     *
+     * @return UpdateResult
+     */
+    public function update($setData, $criteria, $cacheKey = '') {
+        $this->_getConnect('write');
+
+        $this->_setCanEmpty(['data' => [], 'options' => []]);
+
+        //有缓存 要删除
+        if ($cacheKey) {
+            Cache::del($cacheKey);
+        }
+
+        $result = $this->db->update($setData, $criteria, $this->_modelData['data'], $this->_modelData['options']);
+        //清空
+        $this->_modelData = [];
+
+        return $result;
+    }
+
+    /**
+     *  删除数据
+     * @var Mongodb | Mysql
+     * @param        $condition
+     * @param string $cacheKey
+     *
+     * @return int
+     */
+    public function delete($condition, $cacheKey = '') {
+        $this->_getConnect('write');
+
+        $this->_setCanEmpty(['data' => [], 'options' => []]);
+        //有缓存 要删除
+        if ($cacheKey) {
+            Cache::del($cacheKey);
+        }
+
+        $result = $this->db->delete($condition, $this->_modelData['data'], $this->_modelData['options']);
+        //清空
+        $this->_modelData = [];
+
+        return $result;
+    }
+
 
 
     /**
@@ -444,43 +503,6 @@ class Model extends Straw implements Db{
         }
 
         return $result;
-    }
-
-    /**
-     *  更新数据
-     * @param \Strawframework\Protocol\新数据数组 $data
-     * @param \Strawframework\Protocol\更新条件  $condition
-     * @param array                          $args
-     * @param string                         $cacheKey
-     *
-     * @return mixed
-     */
-    public function update($data, $condition, $args = [], $cacheKey = '') {
-        $this->_getConnect('write');
-
-        //有缓存 要删除
-        if ($cacheKey) {
-            Cache::del($cacheKey);
-        }
-
-        return $this->db->update($data, $condition, $args);
-    }
-
-    /**
-     *  删除数据
-     * @param        $condition
-     * @param string $cacheKey
-     *
-     * @return mixed
-     */
-    public function delete($condition, $cacheKey = '') {
-        $this->_getConnect('write');
-        //有缓存 要删除
-        if ($cacheKey) {
-            Cache::del($cacheKey);
-        }
-
-        return $this->db->delete($condition);
     }
 
     /**

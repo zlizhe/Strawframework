@@ -1,16 +1,6 @@
 <?php
-/**
- * User: Zack Lee
- * Date: 2018/11/17
- * Time: 22:06
- */
-
 namespace Strawframework\Base;
-
-
 use MongoDB\BSON\Persistable;
-use function MongoDB\BSON\toJSON;
-use function MongoDB\BSON\toPHP;
 use Strawframework\Common\Code;
 
 /**
@@ -25,6 +15,7 @@ class DataViewObject implements \JsonSerializable, Persistable {
     protected function defaultFilters(): array {
         return ['trim'];
     }
+
     /**
      * @param $colName
      * @param $param
@@ -124,6 +115,15 @@ class DataViewObject implements \JsonSerializable, Persistable {
                 static::$dvoObject[$method->getName()] = ['name' => $name, 'type' => $type, 'propName' => $method->getName()];
             }
         }
+    }
+
+    /**
+     * Rvo 是否有值
+     * @return bool
+     */
+    public function isEmpty(): bool{
+
+        return empty($this->getDvos()) ? true : false;
     }
 
     /**

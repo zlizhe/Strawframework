@@ -7,12 +7,18 @@ use MongoDB\BSON\Persistable;
 use MongoDB\BSON\Regex;
 use function MongoDB\BSON\toJSON;
 use MongoDB\Collection;
+use MongoDB\DeleteResult;
 use MongoDB\Driver\Cursor;
 use MongoDB\InsertManyResult;
 use MongoDB\InsertOneResult;
 use MongoDB\Model\BSONDocument;
+use MongoDB\Operation\DeleteMany;
+use MongoDB\Operation\DeleteOne;
 use MongoDB\Operation\InsertMany;
 use MongoDB\Operation\InsertOne;
+use MongoDB\Operation\UpdateMany;
+use MongoDB\Operation\UpdateOne;
+use MongoDB\UpdateResult;
 use Strawframework\Base\DataViewObject;
 
 /**
@@ -159,7 +165,7 @@ class Mongodb {
      * @return InsertOneResult | InsertManyResult
      * @throws \Exception
      */
-    public function insert($data, array $options = []){
+    public function insert($data, $options = []){
 
         try {
             if (!$this->collection)
@@ -201,7 +207,7 @@ class Mongodb {
      * @return object|null
      * @throws \Exception
      */
-    public function getOne($query = '', $field = [], $data = []) :? object {
+    public function getOne($query = '', $field = [], $data = [], $options = []) :? object {
 
         try{
 
@@ -217,7 +223,13 @@ class Mongodb {
                 $this->sqlQuery .= $query ? json_encode($query) : '{}';
             }
 
-            $options = $this->parseOptions($field);
+            $fieldOptions = $this->parseOptions($field);
+            if (!empty($options))
+                $options = array_merge($options, $fieldOptions);
+            else{
+                $options = $fieldOptions;
+            }
+
 
             $res = $this->collection->findOne($query, $options ?? []);
             return $res;
@@ -235,10 +247,10 @@ class Mongodb {
      * @param int   $limit
      * @param array $data
      *
-     * @return mixed
+     * @return array
      * @throws \Exception
      */
-    public function getAll($query = [], $field = [], $sort = [], $skip = 0, $limit = 0, $data = []): ? array {
+    public function getAll($query = [], $field = [], $sort = [], $skip = 0, $limit = 0, $data = [], $options = []): ? array {
         try{
 
             if (!$this->collection)
@@ -257,9 +269,14 @@ class Mongodb {
                 $this->sqlQuery .= $query ? json_encode($query) : '{}';
             }
 
-            $options = $this->parseOptions($field, $limit, $sort, $skip);
+            $fieldOptions = $this->parseOptions($field, $limit, $sort, $skip);
+            if (!empty($options))
+                $options = array_merge($options, $fieldOptions);
+            else{
+                $options = $fieldOptions;
+            }
 
-            $res = $this->collection->find($query, $options);
+            $res = $this->collection->find($query, $options ?? []);
 
             //echo (json_encode(($res->toArray())));die;
             return $res->toArray();
@@ -278,7 +295,7 @@ class Mongodb {
      * @return int
      * @throws \Exception
      */
-    public function count($query = [], $countField = '', $data = []): int{
+    public function count($query = [], $countField = '', $data = [], $options = []): int{
 
         try{
             if (!$this->collection)
@@ -295,11 +312,159 @@ class Mongodb {
                 $query = $this->parseDVO($query, $data);
 
 
-            $res = $this->collection->countDocuments($query);
+            $res = $this->collection->countDocuments($query, $options);
 
             return $res;
         } catch (\Exception $e){
             throw new \Exception(sprintf("Mongodb count error %s. - Last Query: %s", $e->getMessage(), $this->getLastSql()));
+        }
+    }
+
+
+    //https://docs.mongodb.com/php-library/master/tutorial/crud/#update-one-document
+    const UPDATE_TYPE_ONE = 'updateOne';
+    //https://docs.mongodb.com/php-library/master/tutorial/crud/#find-many-documents
+    const UPDATE_TYPE_MANY = 'updateMany';
+
+    /**
+     *  更新数据
+     * @param       $setData
+     * @param       $condition
+     * @param array $data
+     * @param array $options
+     *
+     * @return UpdateResult
+     * @throws \Exception
+     */
+    public function update($setData, $condition, $data = [], $options = []){
+        try {
+            if (!$this->collection)
+                throw new \Exception('Please set table first.');
+
+            //不允许条件为空 防止全表更新
+            if (!$condition)
+                throw new \Exception('Condition can not empty.');
+
+            $condition = $this->parseDVO($condition, $data);
+
+            //默认贪婪更新
+            if (true == $options['multi'] || !isset($options['multi'])){
+                //实现方式
+                $updateType = self::UPDATE_TYPE_MANY;
+            }else{
+                $updateType = self::UPDATE_TYPE_ONE;
+            }
+
+            //没有设置 操作符号 默认设置为 $set
+            if ($setData instanceof DataViewObject){
+                $setData = ['$set' => $setData];
+            }
+
+            //记录查询语句
+            if (TRUE == APP_DEBUG){
+                $allData = $this->parseDVO($setData, null, false);
+                $this->sqlQuery .= $this->collection . '.' . $updateType . '(';
+                $this->sqlQuery .= $condition ? json_encode($condition) : '{}';
+                $this->sqlQuery .= ',' . json_encode($allData) . ', ' . json_encode($options) . ')';
+            }
+
+            /* @var UpdateMany | UpdateOne */
+            $res = $this->collection->{$updateType}($condition, $setData);
+
+            return $res;
+        } catch (\Exception $e) {
+            throw new \Exception(sprintf("Mongodb update error %s. - Last Query: %s", $e->getMessage(), $this->getLastSql()));
+        }
+    }
+
+
+    //https://docs.mongodb.com/php-library/master/tutorial/crud/#delete-one-document
+    const DELETE_TYPE_ONE = 'deleteOne';
+    //https://docs.mongodb.com/php-library/master/tutorial/crud/#delete-many-documents
+    const DELETE_TYPE_MANY = 'deleteMany';
+
+    /**
+     *  删除数据
+     * @param $condition
+     *
+     * @return DeleteResult
+     * @throws \Exception
+     */
+    public function delete($condition, $data = [], $options = []){
+        try {
+            if (!$this->collection)
+                throw new \Exception('Please set table first.');
+
+            //不允许条件为空 防止全表删除
+            if (!$condition)
+                throw new \Exception('Condition can not empty.');
+
+            //默认贪婪
+            if (true == $options['multi'] || !isset($options['multi'])){
+                //实现方式
+                $deleteType = self::DELETE_TYPE_MANY;
+            }else{
+                $deleteType = self::DELETE_TYPE_ONE;
+            }
+            $condition = $this->parseDVO($condition, $data);
+
+            //记录查询语句
+            if (TRUE == APP_DEBUG){
+                $this->sqlQuery .= $this->collection . '.' . $deleteType . '('.json_encode($condition).')';
+            }
+
+            /* @var DeleteOne | DeleteMany */
+            $res = $this->collection->{$deleteType}($condition, $options);
+
+            return $res->getDeletedCount();
+        } catch (\Exception $e) {
+            throw new \Exception(sprintf("Mongodb delete error %s. - Last Query: %s", $e->getMessage(), $this->getLastSql()));
+        }
+    }
+
+     /**
+     * 兼容 mysql sql 方法 mongo 同 getAll
+     * @param $query
+     * @param $type
+     */
+    public function getQuery($query, $data = '') {
+        return $this->getAll($query);
+    }
+
+    /**
+     *  聚合操作
+     * @param $query 条件
+     * @param $group 聚合字段
+     * @param $fun 聚合方法 sum avg min max push addToSet first last
+     */
+    public function aggregate($query = [], $group, $fun = 'sum', $param = 1){
+
+        $pipeline = [];
+        if (!empty($query)){
+            $query = $this->parseQuery($query);
+
+            array_push($pipeline, ['$match' => $query]);
+        }
+        array_push($pipeline, ['$group' => ['_id' => '$'.$group.'', 'n' => ['$'.$fun.'' => $param == 1 ? 1 : '$'.$param.'']]]);
+
+        //记录查询语句
+        if (TRUE == APP_DEBUG){
+            $this->sqlQuery = $this->db.'.'.$this->collection . '.aggregate(';
+            $this->sqlQuery .= json_encode($pipeline);
+            $this->sqlQuery .= ')';
+        }
+
+        try{
+
+            $commands = [
+                'aggregate' => $this->collection,
+                'pipeline' => $pipeline
+            ];
+            $result = $this->connect->executeCommand($this->db, new \MongoDB\Driver\Command($commands))->toArray();
+
+            return $result[0]->result;
+        } catch (\Exception $e){
+            ex("Mongodb Run Aggregate Error", sprintf("%s ".PHP_EOL.'Last Query : %s', $e->getMessage(), $this->getLastSql()), 'DB Error');
         }
     }
 
@@ -377,51 +542,7 @@ class Mongodb {
         return $options;
     }
 
-    /**
-     * 兼容 mysql sql 方法 mongo 同 getAll
-     * @param $query
-     * @param $type
-     */
-    public function getQuery($query, $data = '') {
-        return $this->getAll($query);
-    }
 
-    /**
-     *  聚合操作
-     * @param $query 条件
-     * @param $group 聚合字段
-     * @param $fun 聚合方法 sum avg min max push addToSet first last
-     */
-    public function aggregate($query = [], $group, $fun = 'sum', $param = 1){
-
-        $pipeline = [];
-        if (!empty($query)){
-            $query = $this->parseQuery($query);
-
-            array_push($pipeline, ['$match' => $query]);
-        }
-        array_push($pipeline, ['$group' => ['_id' => '$'.$group.'', 'n' => ['$'.$fun.'' => $param == 1 ? 1 : '$'.$param.'']]]);
-
-        //记录查询语句
-        if (TRUE == APP_DEBUG){
-            $this->sqlQuery = $this->db.'.'.$this->collection . '.aggregate(';
-            $this->sqlQuery .= json_encode($pipeline);
-            $this->sqlQuery .= ')';
-        }
-
-        try{
-
-            $commands = [
-                'aggregate' => $this->collection,
-                'pipeline' => $pipeline
-            ];
-            $result = $this->connect->executeCommand($this->db, new \MongoDB\Driver\Command($commands))->toArray();
-
-            return $result[0]->result;
-        } catch (\Exception $e){
-            ex("Mongodb Run Aggregate Error", sprintf("%s ".PHP_EOL.'Last Query : %s', $e->getMessage(), $this->getLastSql()), 'DB Error');
-        }
-    }
 
     /**
      * 开始绑定 :column
@@ -502,115 +623,6 @@ class Mongodb {
     }
 
 
-    //更新的行数
-    public $modifiedCount = 0;
-
-    /**
-     *  更新数据
-     *  @param $data 新数据数组 array()
-     *  @param $condition 更新条件 array()
-     *
-     */
-    public function update($data, $condition, $args = []){
-        $this->modifiedCount = 0;
-        if (!$this->collection)
-            ex('Collection not found');
-
-        if (!$condition)
-            ex('Update Conditions can not empty !');
-
-        if (!empty($condition))
-            $condition = $this->parseQuery($condition);
-        
-        try {
-            $bulk = new \MongoDB\Driver\BulkWrite;
-
-            //传入非数组
-            if (!is_array($data))
-                throw new \Exception((sprintf("Update value must to be array : %s", var_export($data, true))));
-
-            $allData = [];
-            if(count($data) == count($data, COUNT_RECURSIVE)){
-                $allData[0] = $data;
-            }else {
-                $allData = $data;
-            }
-
-            $updateQuery = [];
-            $br = false;
-            //多维数组
-            foreach ($allData as $value) {
-                //传入 ['bulk' => true] 时批量更新
-                if (!$args['bulk']){
-                    $value = $data;
-                    $br = true;
-                }
-                //like ['set' => '$addToSet'] or ['set' => '$pull'] ['set' => '$push'] e.g.
-                //new data add $set 如果没有设置 set 则 '$set' => $value 如果 设置了 set 则 'set内容如 $pull' => $value
-                $value = [$args['set'] ?: '$set' => $value];
-                //$condition 中 可传入参数 $upsert = true 没有更新则新增数据
-                $bulk->update($condition, $value, ['multi' => true, 'upsert' => $args['upsert'] ? true : false]);
-
-                $updateQuery = array_merge($updateQuery, $value);
-
-                //含子数组 并且 value 不是数组的 只有一行数据需要更新
-                if (true == $br)
-                    break;
-            }
-
-            //记录查询语句
-            if (TRUE == APP_DEBUG){
-                $this->sqlQuery .= $this->db.'.'.$this->collection . '.updateMany(';
-                $this->sqlQuery .= $condition ? json_encode($condition) : '{}';
-                $this->sqlQuery .= ',' . json_encode($updateQuery) . ', ' . json_encode(['multi' => true, 'upsert' => $args['upsert'] ? true : false]) . ')';
-            }
-
-            unset($allData, $condition, $data);
-            $reData = $this->connect->executeBulkWrite($this->db.'.'.$this->collection, $bulk);
-            //getModifiedCount 真正修改的行数
-            $this->modifiedCount = $reData->getModifiedCount();
-
-            if ($args['upsert'] == 1){
-                // 没有值 时写入了多少数据
-                return $reData->getUpsertedCount() ?: false;
-            }else{
-                // 匹配到需要更新的数据量
-                return $reData->getMatchedCount() ?: false;
-            }
-        } catch (\Exception $e) {
-            ex("Mongodb Update Error", sprintf("%s ".PHP_EOL.'Last Query : %s', $e->getMessage(), $this->getLastSql()), 'DB Error');
-        }
-    }
-
-    /*
-     *  删除数据
-     *  @param $condition 删除条件 array()
-     * */
-    public function delete($condition){
-        if (!$this->collection)
-            ex('Collection not found');
-
-        if (!$condition)
-            ex('Delete Conditions can not empty !');
-
-        if (!empty($condition))
-            $condition = $this->parseQuery($condition);
-
-        try {
-            $bulk = new \MongoDB\Driver\BulkWrite;
-            $_id = $bulk->delete($condition);
-
-            //记录查询语句
-            if (TRUE == APP_DEBUG){
-                $this->sqlQuery .= $this->db.'.'.$this->collection . '.remove('.json_encode($condition).')';
-            }
-
-            $data = $this->connect->executeBulkWrite($this->db.'.'.$this->collection, $bulk);
-            return $data->getDeletedCount() ?: false;
-        } catch (\Exception $e) {
-            ex("Mongodb Delete Error", sprintf("%s ".PHP_EOL.'Last Query : %s', $e->getMessage(), $this->getLastSql()), 'DB Error');
-        }
-    }
 
     /**
      * 调试使用

@@ -20,7 +20,7 @@ class Service extends Straw {
     /**
      * 获取Model
      */
-    protected function getModel(string $modelName): Model{
-        return $this->getSingleInstance('\\Model\\' . ucfirst($modelName));
-    }
+    //protected function getModel(string $modelName): Model{
+    //    return $this->getSingleInstance('\\Model\\' . ucfirst($modelName));
+    //}
 }

@@ -4,9 +4,7 @@ use Strawframework\Common\Funs;
 use Strawframework\Straw;
 
 /**
- * User: Zack Lee
- * Date: 2018/11/18
- * Time: 9:34
+ * 返回结果
  */
 
 
@@ -42,7 +40,6 @@ class Result implements \Strawframework\Protocol\Result {
      * @param null|string $msg
      * @param array|object       $res
      *
-     * @throws \Exception
      */
     public function __construct(int $code, ? string $msg = null, $res = [], $doReturn = false) {
 
