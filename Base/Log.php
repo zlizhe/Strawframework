@@ -18,19 +18,16 @@ class Log {
     private  $logger;
 
     private function __construct(){
+        $this->logger = new Logger('mylog');
     }
 
     static public function getInstance(){
-         if(!self::$instance){
+        if (!self::$instance instanceof self) {
              self::$instance = new self();
          }
-        return self::$instance->init();
+        return self::$instance;
     }
 
-    public function init(){
-        $this->logger = new Logger('mylog');
-        return $this;
-    }
     public function info($msg, $context){
         $logger = $this->logger;
         $log = $this->getConfig('INFO');
