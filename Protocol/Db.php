@@ -28,13 +28,15 @@ interface Db{
     public function getAll();
 
     /**
-     * 执行完整 sql
-     * @param $query
-     * @param $data
-     *
+     * 统计文档（字段）数量
      * @return mixed
      */
-    public function getQuery($query, $data);
+    public function count();
+
+    /**
+     * 执行完整 sql
+     */
+    public function getQuery();
 
     /**
      *  更新数据

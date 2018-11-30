@@ -392,7 +392,7 @@ class Model extends Straw implements Db{
 
         //自动生成 cachekey
         if (TRUE === $this->_modelData['cacheKey']) {
-            $this->_modelData['cacheKey'] = md5($this->table . __METHOD__ . json_encode($this->_modelData['query']) . json_encode($countField));
+            $this->_modelData['cacheKey'] = md5($this->table . __METHOD__ . json_encode($this->_modelData['query']) . json_encode($countField) . json_encode($this->_modelData['data']) . json_encode($this->_modelData['options']));
         }
         if ($this->_modelData['cacheKey']) {
             //有缓存 数据优先使用
@@ -423,7 +423,7 @@ class Model extends Straw implements Db{
      * 更新数据
      * @param array|object $setData 待更新数据
      * @param array|object $criteria 更新条件
-     * @param string $cacheKey
+     * @param string $cacheKey 需要删除的缓存 key
      * @var Mongodb | Mysql
      *
      * @return UpdateResult
@@ -448,12 +448,12 @@ class Model extends Straw implements Db{
     /**
      *  删除数据
      * @var Mongodb | Mysql
-     * @param        $condition
-     * @param string $cacheKey
+     * @param        $criteria
+     * @param string $cacheKey 需要删除的缓存 key
      *
      * @return int
      */
-    public function delete($condition, $cacheKey = '') {
+    public function delete($criteria, $cacheKey = '') {
         $this->_getConnect('write');
 
         $this->_setCanEmpty(['data' => [], 'options' => []]);
@@ -462,7 +462,7 @@ class Model extends Straw implements Db{
             Cache::del($cacheKey);
         }
 
-        $result = $this->db->delete($condition, $this->_modelData['data'], $this->_modelData['options']);
+        $result = $this->db->delete($criteria, $this->_modelData['data'], $this->_modelData['options']);
         //清空
         $this->_modelData = [];
 
@@ -473,7 +473,6 @@ class Model extends Straw implements Db{
 
     /**
      * 执行 SQL
-     * @todo 重新实现需要兼容 Mongodb Aggregate
      * @param          $query
      * @param          $data
      * @param string   $cacheKey
@@ -481,12 +480,14 @@ class Model extends Straw implements Db{
      *
      * @return mixed
      */
-    public function getQuery($query, $data, $cacheKey = '', $exp = DEFAULT_CACHEEXPIRE ?? null) {
+    public function getQuery() {
         $this->_getConnect('read');
 
+        $this->_setCanEmpty(['query' => [], 'data' => [], 'options' => [], 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
+
         //自动生成 cachekey
-        if (TRUE === $cacheKey) {
-            $cacheKey = md5($this->table . __METHOD__ . json_encode($query));
+        if (TRUE === $this->_modelData['cacheKey']) {
+            $cacheKey = md5($this->table . __METHOD__ . json_encode($this->_modelData));
         }
         if ($cacheKey) {
             //有缓存 数据优先使用
@@ -496,10 +497,10 @@ class Model extends Straw implements Db{
             }
         }
 
-        $result = $this->db->getQuery($query, $data);
+        $result = $this->db->getQuery($this->_modelData['query'], $this->_modelData['data'], $this->_modelData['options']);
 
         if ($cacheKey) {
-            Cache::set($cacheKey, json_encode($result), $exp);
+            Cache::set($cacheKey, json_encode($result), $this->_modelData['exp']);
         }
 
         return $result;
@@ -542,46 +543,6 @@ class Model extends Straw implements Db{
     //获取查询语句调试
     public function getLastSql() {
         return $this->db->getLastSql();
-    }
-
-
-    /**
-     * mongodb 专用
-     *
-     * @param $group
-     */
-    public function aggregate($group, $fun, $params = 1) {
-        //mysql do not use this
-        if ('mysql' == self::$dbArr[$this->dbtag]['DB_TYPE']) {
-            ex('Aggregate only used on Mongodb');
-        }
-
-        $this->_getConnect('read');
-        //自动生成 cachekey
-        if (TRUE === $this->_modelData['cacheKey']) {
-            $this->_modelData['cacheKey'] = md5($this->tbl . __METHOD__ . json_encode($this->_modelData['query']) . $group . $fun . $params);
-        }
-        if ($this->_modelData['cacheKey']) {
-            //有缓存 数据优先使用
-            $cacheRes = json_decode(Cache::get($this->_modelData['cacheKey']), TRUE);
-            if ($cacheRes) {
-                //取到数据 清空条件
-                $this->_modelData = [];
-
-                return $cacheRes;
-            }
-        }
-
-        $result = $this->db->aggregate($this->_modelData['query'], $group, $fun, $params);
-
-        if ($this->_modelData['cacheKey']) {
-            Cache::set($this->_modelData['cacheKey'], json_encode($result), $this->_modelData['exp']);
-        }
-
-        //取到数据 清空条件
-        $this->_modelData = [];
-
-        return $result;
     }
 
     /**

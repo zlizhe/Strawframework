@@ -196,10 +196,23 @@ class DataViewObject implements \JsonSerializable, Persistable {
             throw new \Exception(sprintf("Alias's property %s not found.", $propName));
 
         $backUp = $this->{lcfirst($propName)};
-        //写入原字段
-        $this->{'set' . ucfirst($propName)}($value);
-        //读原字段 写 alias 字段 _ 开头
-        $this->{'_' . $alias} = $this->{lcfirst($propName)};
+
+        if (!is_array($value)){
+            //写入原字段
+            $this->{'set' . ucfirst($propName)}($value);
+            //读原字段 写 alias 字段 _ 开头
+            $this->{'_' . $alias} = $this->{lcfirst($propName)};
+        }else{
+            $aliasArr = [];
+            //传入的是数组 原 age = int 传入  [1,2,3,4]
+            foreach ($value as $v) {
+                //即使传入数组 每个 value 的类型也必须与 原值一样
+                $this->{'set' . ucfirst($propName)}($v);
+                $aliasArr[] = $this->{lcfirst($propName)};
+            }
+            $this->{'_' . $alias} = $aliasArr;
+        }
+
         //写回备份 至 原字段
         $this->{lcfirst($propName)} = $backUp;
 
