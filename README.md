@@ -41,7 +41,7 @@ Wiki (https://github.com/zlizhe/strawframework/wiki)
 
 - [ ] Redis ORM
 
-- [ ] Model
+- [x] Model
 
 - [ ] Mysql ORM
 
