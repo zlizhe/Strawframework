@@ -123,7 +123,7 @@ class Model extends Straw implements Db{
 
         //驱动是否存在
         // db namespace
-        $dbClass = '\Strawframework\\Db\\' . $dbClass;
+        $dbClass = '\\Strawframework\\Db\\' . $dbClass;
         if (FALSE === class_exists($dbClass))
             throw new \Exception(sprintf('Database driver %s not found.', $dbClass));
 
