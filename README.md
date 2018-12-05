@@ -42,7 +42,6 @@
 - [ ] Input 支持 JSON TEXT XML 支持配置
 
 
-_Newest Version [3.0](https://github.com/zlizhe/Strawframework/wiki/Cookbook-For-Version-3)_
 # Welcome to Strawframework 🛫
 
 ## [🥇Cookbook for v3 (_New_)](https://github.com/zlizhe/Strawframework/wiki/Cookbook-For-Version-3)
