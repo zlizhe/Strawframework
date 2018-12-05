@@ -444,7 +444,7 @@ class Mongodb implements Db {
 
 
         try {
-            if (method_exists($this, $options['_do'])) {
+            if (method_exists($this, $options['method'])) {
                 unset($options['method']);
                 $this->{$options['method']}($query, $data, $options);
             } else {
