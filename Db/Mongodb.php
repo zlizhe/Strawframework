@@ -530,7 +530,7 @@ class Mongodb implements Db {
 
             //field 语句记录
             if(!empty($options['projection']) && TRUE == APP_DEBUG) {
-                $this->sqlQuery  .=  $field ? ', '.json_encode(array_values($options)[0]) : ', {}';
+                $this->sqlQuery  .=  $field ? ', '.json_encode(array_values($options['projection'])) : ', {}';
             }
         }
 
