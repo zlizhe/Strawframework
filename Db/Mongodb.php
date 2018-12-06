@@ -364,7 +364,7 @@ class Mongodb implements Db {
             }
 
             /* @var UpdateMany | UpdateOne */
-            $res = $this->collection->{$updateType}($condition, $setData);
+            $res = $this->collection->{$updateType}($condition, $setData, $options);
 
             return $res;
         } catch (\Exception $e) {
