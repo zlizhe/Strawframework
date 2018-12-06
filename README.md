@@ -11,6 +11,10 @@
 git clone https://github.com/zlizhe/Strawframework.git
 ```
 
+Or Download zip
+
+_https://github.com/zlizhe/Strawframework/releases_
+
 ### [🥇Cookbook for v3 (_New_)](https://github.com/zlizhe/Strawframework/wiki/Cookbook-For-Version-3)
 
 ### [🎨Development Version](https://github.com/zlizhe/Strawframework/wiki/DevelopmentVersion)
