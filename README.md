@@ -1,10 +1,8 @@
 *Newest Version 3.0*
 
-## Welcome to Strawframework
+## Welcome to Strawframework Development Version V3
 
 ### [🛫Strawframework Wiki](https://github.com/zlizhe/Strawframework/wiki)
-
-### [🥇Cookbook for v3 (_New_)](https://github.com/zlizhe/Strawframework/wiki/Cookbook-For-Version-3)
 
 ### [🎨Development Version](https://github.com/zlizhe/Strawframework/wiki/DevelopmentVersion)
 
