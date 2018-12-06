@@ -1,0 +1,8 @@
+{
+    "require": {
+        "vlucas/phpdotenv": "^2.5",
+        "mongodb/mongodb": "^1.4",
+        "illuminate/events": "^5.7",
+        "monolog/monolog": "^1.24"
+    }
+}
