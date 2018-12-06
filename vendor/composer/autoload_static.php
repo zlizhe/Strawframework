@@ -16,6 +16,7 @@ class ComposerStaticInitb607d2456d5dc71619a01b6a05e558a5
         'S' => 
         array (
             'Symfony\\Polyfill\\Mbstring\\' => 26,
+            'Symfony\\Contracts\\' => 18,
             'Symfony\\Component\\Translation\\' => 30,
         ),
         'P' => 
@@ -33,13 +34,16 @@ class ComposerStaticInitb607d2456d5dc71619a01b6a05e558a5
         array (
             'Illuminate\\Support\\' => 19,
             'Illuminate\\Events\\' => 18,
+            'Illuminate\\Database\\' => 20,
             'Illuminate\\Contracts\\' => 21,
             'Illuminate\\Container\\' => 21,
         ),
         'D' => 
         array (
-            'Dotenv\\' => 7,
+            'Doctrine\\DBAL\\' => 14,
             'Doctrine\\Common\\Inflector\\' => 26,
+            'Doctrine\\Common\\Cache\\' => 22,
+            'Doctrine\\Common\\' => 16,
         ),
     );
 
@@ -47,6 +51,10 @@ class ComposerStaticInitb607d2456d5dc71619a01b6a05e558a5
         'Symfony\\Polyfill\\Mbstring\\' => 
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-mbstring',
+        ),
+        'Symfony\\Contracts\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/contracts',
         ),
         'Symfony\\Component\\Translation\\' => 
         array (
@@ -80,6 +88,10 @@ class ComposerStaticInitb607d2456d5dc71619a01b6a05e558a5
         array (
             0 => __DIR__ . '/..' . '/illuminate/events',
         ),
+        'Illuminate\\Database\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/illuminate/database',
+        ),
         'Illuminate\\Contracts\\' => 
         array (
             0 => __DIR__ . '/..' . '/illuminate/contracts',
@@ -88,13 +100,21 @@ class ComposerStaticInitb607d2456d5dc71619a01b6a05e558a5
         array (
             0 => __DIR__ . '/..' . '/illuminate/container',
         ),
-        'Dotenv\\' => 
+        'Doctrine\\DBAL\\' => 
         array (
-            0 => __DIR__ . '/..' . '/vlucas/phpdotenv/src',
+            0 => __DIR__ . '/..' . '/doctrine/dbal/lib/Doctrine/DBAL',
         ),
         'Doctrine\\Common\\Inflector\\' => 
         array (
             0 => __DIR__ . '/..' . '/doctrine/inflector/lib/Doctrine/Common/Inflector',
+        ),
+        'Doctrine\\Common\\Cache\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/doctrine/cache/lib/Doctrine/Common/Cache',
+        ),
+        'Doctrine\\Common\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/doctrine/event-manager/lib/Doctrine/Common',
         ),
     );
 
