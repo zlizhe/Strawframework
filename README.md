@@ -2,7 +2,14 @@
 
 ## Welcome to Strawframework
 
+
 ### [🛫Strawframework Wiki](https://github.com/zlizhe/Strawframework/wiki)
+
+### Get Strawframework On PRODUCTION
+
+```bash
+git clone https://github.com/zlizhe/Strawframework.git
+```
 
 ### [🥇Cookbook for v3 (_New_)](https://github.com/zlizhe/Strawframework/wiki/Cookbook-For-Version-3)
 
@@ -11,4 +18,4 @@
 
 ***
 
-From [Strawberry Team](https://strawberryteam.github.io) _[Project](https://github.com/StrawberryTeam)_
+From [Strawberry Team](https://strawberryteam.github.io) 2018 _[Strawberry Team Projects](https://github.com/StrawberryTeam)_
