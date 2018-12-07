@@ -4,7 +4,7 @@ namespace Strawframework\Db;
 use \PDO;
 use Strawframework\Protocol\Db;
 
-class Mysql implements Db {
+class MysqlPDO implements Db {
 
     //pdo obj
     private $pdo;
