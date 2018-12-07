@@ -135,8 +135,11 @@ class Mongodb implements Db {
             }
 
             //绑定 data
-            if (!empty($dataQuery))
+            if (!empty($dataQuery)){
                 $data[$key] = $this->bindQuery($dataQuery, $data[$key]);
+            }else if (!empty($matchs)){
+                throw new \Exception(sprintf('Data %s with DVO Alias must bind from ->data method.', var_dump($dvo, true)));
+            }
 
             //解析特殊字
             $data[$key] = $this->parseQuery($data[$key]);

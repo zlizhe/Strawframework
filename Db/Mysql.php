@@ -6,13 +6,12 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Events\Dispatcher;
 use Illuminate\Container\Container;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Strawframework\Base\DataViewObject;
 use Strawframework\Straw;
 
 class Mysql extends Straw implements \Strawframework\Protocol\Db {
-
-    //model 中执行的 sql
-    private $sqlQuery = '';
 
     //数据库对象
     /*
@@ -25,6 +24,9 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
      * @var Builder
      */
     private $table;
+
+    //操作表名
+    private $tableName;
 
     public function __construct($config) {
         parent::__construct();
@@ -61,25 +63,20 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
     }
 
     public function __destruct() {
-        $this->pdo = null;
-        unset($this->sqlQuery, $this->table);
+        unset($this->table, $this->db, $this->tableName);
     }
 
     /**
      *  选择表
      */
     public function setTable($table) {
+        $this->tableName = $table;
         $this->table = $this->db->table($table);
-    }
-
-    //设置最后执行的sql
-    private function _setLastSql($sql) {
-        $this->sqlQuery = $sql;
     }
 
     //取最后一次执行的 sql
     public function getLastSql() {
-        return $this->sqlQuery;
+        return $this->table->toSql();
     }
 
     /**
@@ -107,9 +104,13 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
 
             $data[$key] = $dvo->getDvos();
 
+            preg_match('/_/', json_encode($data), $matchs);
             //绑定 data
-            if (!empty($dataQuery))
+            if (!empty($dataQuery)){
                 $data[$key] = $this->bindQuery($dataQuery, $data[$key]);
+            }else if (!empty($matchs)){
+                throw new \Exception(sprintf('Data %s with DVO Alias must bind from ->data method.', var_dump($dvo, true)));
+            }
         }
         return is_array($dvos) ? $data : current($data);
     }
@@ -146,6 +147,98 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
     }
 
 
+    //db 待执行方法
+    private static $dbFuns = [];
+    /**
+     * return db object
+     * @return Builder
+     */
+    public function db($name, $argments = []): void{
+        if (method_exists($this->table, $name)){
+            self::$dbFuns[] = [$name => $argments];
+        }else{
+            throw new \Exception(sprintf('Method %s not found in db: %s', $name, $this->tableName));
+        }
+    }
+
+    /**
+     * 解析 model data
+     * @param $modelData
+     *
+     */
+    private function parseModelData($modelData){
+        extract($modelData);
+
+        if (!$field) {
+            $field = $this->getAllField();
+        }
+
+        $this->table->select($field);
+
+        //sql
+        if (!empty($query)) {
+            //dvo to array
+            if ($query instanceof DataViewObject){
+                $query = $this->parseDVO($query, $data);
+                foreach ($query as $column => $value) {
+                    if (is_array($value)){
+                        foreach ($value as $operator => $v) {
+                            $operator = substr($operator, 1);
+                            $this->table->$operator($column, $v);
+                        }
+                    }else{
+                        $this->table->where($column, $value);
+                    }
+                }
+            }else{
+                //pdo bind
+                $this->table->whereRaw($query, $data);
+            }
+        }
+
+        if ($order) {
+            if (is_string($order)) {
+                // created_at desc, id asc
+                $orderList = explode(',', $order);
+                foreach ($orderList as $orderOne) {
+                    list($column, $direct) = preg_split('/\s+/', trim($orderOne));
+                    $this->table->orderBy($column, $direct);
+                }
+            } else {
+                // ['created_at' => 'desc', 'id' => 'asc']
+                foreach ($order as $column => $direct) {
+                    $this->table->orderBy($column, $direct);
+                }
+            }
+        }
+
+        if ($offset) {
+            $this->table->offset($offset);
+        }
+
+        if ($limit) {
+            $this->table->limit($limit);
+        }
+    }
+
+    /**
+     * 获取数据表所有字段
+     */
+    public function getAllField($table = '') {
+
+        if (!$table) {
+            $table = $this->tableName;
+        }
+
+        try{
+            $field = Capsule::schema()->getColumnListing($table);
+        }catch (\PDOException $e){
+            $field = '*';
+        }finally{
+            return $field;
+        }
+    }
+
     /**
      * 组合条件的数据查询
      *
@@ -156,96 +249,36 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
      * @param int          $offset 数据偏移量
      * @param int          $limit  取数据条数
      *
-     * @return array
+     * @return Builder
      */
-    public function getAll($query = '', $field = '', $order = '', $offset = NULL, $limit = NULL, $data = '') {
+    public function getAll($query = '', $field = [], $order = '', $offset = NULL, $limit = NULL, $data = []) {
 
-        if (!$field) {
-            $field = $this->getAllField();
-        }
+        try {
 
-        if (is_array($field)) {
-            $field = $this->getFieldViaArr($field);
-        }
+            $this->parseModelData(compact('query', 'field', 'order', 'offset', 'limit', 'data'));
 
-        $map = '';
-        if (!empty($query)) {
-            if (is_array($query)) {
-                $data = [];
-                $mapArr = array();
-                foreach ($query as $key => $value) {
-                    $mapArr[] = '`'.addslashes($key).'` = ?';
-                    $data[] = $value;
+            if (!empty(self::$dbFuns)){
+                foreach (self::$dbFuns as $fun) {
+                    foreach ($fun as $k => $f) {
+                        call_user_func_array([$this->table, $k], $f);
+                    }
                 }
-                $map = ' WHERE ' . implode(' AND ', $mapArr);
-            } else {
-                $map = ' ' . $query;
+                self::$dbFuns = [];
             }
+
+            $res = $this->table->get();
+
+            return $res;
+        }catch (\Exception $e){
+            throw new \Exception(sprintf("Mysql getAll error %s.", $e->getMessage()));
         }
-
-        $orderby = '';
-        if ($order) {
-            if (is_array($order)) {
-//                $orderKey = [];
-//                foreach ($order as $value) {
-//                    $orderKey[] = '?';
-////                    $data[] = $value;
-//                }
-                $orderby = ' ORDER BY ' . implode(',', $order);
-            } else {
-                $orderby = ' ORDER BY ' . $order;
-//                $data[] = addslashes($order);
-            }
-        }
-        $limitstr = '';
-        if ($limit > 0) {
-//            $limitstr = ' LIMIT '.abs(intval($offset)).', '.intval($limit);
-            $limitstr = ' LIMIT ?, ?';
-            $data[] = abs(intval($offset));
-            $data[] = intval($limit);
-        }
-
-
-        $sql = "SELECT " . $field . " FROM `" . $this->table . '`' . $map . $orderby . $limitstr;
-
-        return $this->doQuery($sql, $data, 'all', PDO::FETCH_ASSOC);
     }
 
-    /**
-     * 获取数据表所有字段
-     */
-    public function getAllField($table = '') {
-
-        if (!$table) {
-            $table = $this->table;
-        }
-
-        $field = array_column($this->doQuery(sprintf('SHOW COLUMNS FROM `%s`', addslashes($table))), 'Field');
-//        $field = array_column($this->doQuery('SHOW COLUMNS FROM `'. $table .'`'), 'Field');
-        $field = '`' . implode('`, `', $field) . '`';
-        return $field;
-    }
 
     //获取行数
     public function count($query = '', $countField = '*', $data = []){
         return $this->getOne($query, "count($countField) AS count", $data)['count'];
     }
-
-//    //检查绑定数据是否完整
-//    private function _bindInfo($query, $data){
-//        //包含 ? 号的绑定
-//        $wbindNum = substr_count($query, '?');
-//        //包含 : 号的绑定
-//        $mbindNum = substr_count($query, ':');
-//        if (0 == $wbindNum && 0 == $mbindNum) {
-//            ex('Mysql query with string must use prepare to binding data see : http://php.net/manual/zh/pdo.prepare.php');
-//        }else{
-//            $dataNum = count(array_values($data));
-//            if ($dataNum != $wbindNum && $dataNum != $mbindNum){
-//                ex('Binding data not equal to query point character');
-//            }
-//        }
-//    }
 
     /**
      * 根据条件查询一条结果
@@ -301,84 +334,8 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
      * @param string $ftype
      * @param int    $type
      */
-    public function getQuery() {
-        //return $this->doQuery($sql, $data, 'all', $type);
-    }
-
-    /**
-     *执行查询操作
-     *
-     * @param string $sql   sql语句
-     * @param string $ftype 执行类型,all:全部数据,one:一条记录
-     *
-     * @return mixed
-     */
-    private function doQuery($sql, $bindData = '', $ftype = 'all', $type = PDO::FETCH_ASSOC) {
-        try {
-            $this->_setLastSql($this->_interpolateQuery(trim($sql), $bindData));
-            if ($bindData)
-                $this->pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
-            $pre = $this->pdo->prepare(trim($sql));
-            if (!is_object($pre)) {
-                throw new \Exception(sprintf('SQL语句预处理失败: %s', $this->getLastSql()));
-            }
-
-            if (!is_array($bindData))
-                $bindData = (array) $bindData;
-//            print_r($bindData);
-            if (!$pre->execute($bindData)) {
-                throw new \Exception(sprintf('SQL语句执行失败: %s', $this->getLastSql()));
-            }
-
-            $type = !empty($type) ? $type : PDO::FETCH_ASSOC;
-            if (strtolower($ftype) == 'all') {
-                $result = $pre->fetchAll($type);
-            } else {
-                $result = $pre->fetch($type);
-            }
-            /*
-            if (FALSE === $result) {
-                $error = $pre->errorInfo();
-                throw new \Exception($error[2] . '<br/>LAST SQL = ' . $this->getLastSql() . $error[1]);
-            }
-             */
-            return $result ?: false;
-        } catch (\Exception $e) {
-            ex($e->getMessage(), $e->getTraceAsString(), 'Db Error');
-        }
-    }
-
-
-    /**
-     * 为 pdo bind 数据赋值为最终执行语句
-     * Replaces any parameter placeholders in a query with the value of that
-     * parameter. Useful for debugging. Assumes anonymous parameters from
-     * $params are are in the same order as specified in $query
-     *
-     * @param string $query The sql query with parameter placeholders
-     * @param array $params The array of substitution parameters
-     * @return string The interpolated query
-     */
-    private function _interpolateQuery($query, $params) {
-        if (!$params)
-            return $query;
-
-        $keys = array();
-
-        # build a regular expression for each parameter
-        foreach ($params as $key => $value) {
-            if (is_string($key)) {
-                $keys[] = '/:'.$key.'/';
-            } else {
-                $keys[] = '/[?]/';
-            }
-        }
-
-        @$beautifulQuery = preg_replace($keys, $params, $query, 1, $count);
-
-        #trigger_error('replaced '.$count.' keys');
-
-        return $beautifulQuery ?: $query;
+    public function getQuery($query = '', $data = [], $options = []) {
+        return DB::select(DB::raw($query), $data);
     }
 
     /**
@@ -402,8 +359,8 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
                 $res = $this->table->insert($allData);
             }
             return $res;
-        } catch (QueryException $e) {
-            throw new \Exception(sprintf("Mysql insert error %s. - Last Query: %s", $e->getMessage(), $this->getLastSql()));
+        } catch (\Exception | QueryException $e) {
+            throw new \Exception(sprintf("Mysql insert error %s.", $e->getMessage()));
         }
     }
 
@@ -476,5 +433,4 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
             ex('Mysql Delete Error', $e->getMessage() . PHP_EOL . $e->getTraceAsString(), 'Db Error');
         }
     }
-
 }

@@ -142,7 +142,6 @@ class RequestObject{
      * @param string $type
      *
      * @return object
-     * @throws \Exception
      */
     public static function convert($v, string $type){
         $doConvert = [

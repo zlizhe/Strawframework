@@ -141,11 +141,15 @@ class MysqlPDO implements Db {
             $table = $this->table;
         }
 
-        return '*';
-        $field = array_column($this->doQuery(sprintf('SHOW COLUMNS FROM `%s`', addslashes($table))), 'Field');
-//        $field = array_column($this->doQuery('SHOW COLUMNS FROM `'. $table .'`'), 'Field');
-        $field = '`' . implode('`, `', $field) . '`';
-        return $field;
+        try{
+            $field = array_column($this->doQuery(sprintf('SHOW COLUMNS FROM `%s`', addslashes($table))), 'Field');
+    //        $field = array_column($this->doQuery('SHOW COLUMNS FROM `'. $table .'`'), 'Field');
+            $field = '`' . implode('`, `', $field) . '`';
+        }catch (\PDOException $e){
+            $field = '*';
+        }finally{
+            return $field;
+        }
     }
 
     //获取行数

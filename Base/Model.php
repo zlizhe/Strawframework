@@ -1,6 +1,7 @@
 <?php
 namespace Strawframework\Base;
 
+use Illuminate\Database\Query\Builder;
 use MongoDB\BSON\ObjectId;
 use MongoDB\BSON\UTCDateTime;
 use MongoDB\DeleteResult;
@@ -15,7 +16,90 @@ use Strawframework\Straw, Strawframework\Protocol\Db;
  * 模型基类
  * 初始化数据库配置
  * Class Model
- * @package library
+ * // MYSQL LIBRARY START
+ * @var Builder
+ * @method $this join($table, $first, $operator = null, $second = null, $type = 'inner', $where = false)
+ * @method $this distinct()
+ * @method $this addSelect($column)
+ * @method $this selectSub($query, $as)
+ * @method $this selectRaw($expression, array $bindings = [])
+ * @method $this fromSub($query, $as)
+ * @method $this fromRaw($expression, $bindings = [])
+ * @method $this joinWhere($table, $first, $operator, $second, $type = 'inner')
+ * @method $this joinSub($query, $as, $first, $operator = null, $second = null, $type = 'inner', $where = false)
+ * @method $this leftJoin($table, $first, $operator = null, $second = null)
+ * @method $this leftJoinWhere($table, $first, $operator, $second)
+ * @method $this leftJoinSub($query, $as, $first, $operator = null, $second = null)
+ * @method $this rightJoin($table, $first, $operator = null, $second = null)
+ * @method $this rightJoinWhere($table, $first, $operator, $second)
+ * @method $this rightJoinSub($query, $as, $first, $operator = null, $second = null)
+ * @method $this crossJoin($table, $first = null, $operator = null, $second = null)
+ * @method $this mergeWheres($wheres, $bindings)
+ * @method $this where($column, $operator = null, $value = null, $boolean = 'and')
+ * @method $this orWhere($column, $operator = null, $value = null)
+ * @method $this whereColumn($first, $operator = null, $second = null, $boolean = 'and')
+ * @method $this orWhereColumn($first, $operator = null, $second = null)
+ * @method $this whereRaw($sql, $bindings = [], $boolean = 'and')
+ * @method $this orWhereRaw($sql, $bindings = [])
+ * @method $this whereIn($column, $values, $boolean = 'and', $not = false)
+ * @method $this orWhereIn($column, $values)
+ * @method $this whereNotIn($column, $values, $boolean = 'and')
+ * @method $this orWhereNotIn($column, $values)
+ * @method $this whereIntegerInRaw($column, $values, $boolean = 'and', $not = false)
+ * @method $this whereIntegerNotInRaw($column, $values, $boolean = 'and')
+ * @method $this whereNull($column, $boolean = 'and', $not = false)
+ * @method $this orWhereNull($column)
+ * @method $this whereNotNull($column, $boolean = 'and')
+ * @method $this whereBetween($column, array $values, $boolean = 'and', $not = false)
+ * @method $this orWhereBetween($column, array $values)
+ * @method $this whereNotBetween($column, array $values, $boolean = 'and')
+ * @method $this orWhereNotBetween($column, array $values)
+ * @method $this orWhereNotNull($column)
+ * @method $this whereDate($column, $operator, $value = null, $boolean = 'and')
+ * @method $this orWhereDate($column, $operator, $value = null)
+ * @method $this whereTime($column, $operator, $value = null, $boolean = 'and')
+ * @method $this orWhereTime($column, $operator, $value = null)
+ * @method $this whereDay($column, $operator, $value = null, $boolean = 'and')
+ * @method $this orWhereDay($column, $operator, $value = null)
+ * @method $this whereMonth($column, $operator, $value = null, $boolean = 'and')
+ * @method $this orWhereMonth($column, $operator, $value = null)
+ * @method $this whereYear($column, $operator, $value = null, $boolean = 'and')
+ * @method $this orWhereYear($column, $operator, $value = null)
+ * @method $this whereNested(\Closure $callback, $boolean = 'and')
+ * @method $this forNestedWhere()
+ * @method $this whereExists(\Closure $callback, $boolean = 'and', $not = false)
+ * @method $this orWhereExists(\Closure $callback, $not = false)
+ * @method $this whereNotExists(\Closure $callback, $boolean = 'and')
+ * @method $this orWhereNotExists(\Closure $callback)
+ * @method $this addWhereExistsQuery(self $query, $boolean = 'and', $not = false)
+ * @method $this whereRowValues($columns, $operator, $values, $boolean = 'and')
+ * @method $this orWhereRowValues($columns, $operator, $values)
+ * @method $this whereJsonContains($column, $value, $boolean = 'and', $not = false)
+ * @method $this orWhereJsonContains($column, $value)
+ * @method $this whereJsonDoesntContain($column, $value, $boolean = 'and')
+ * @method $this orWhereJsonDoesntContain($column, $value)
+ * @method $this whereJsonLength($column, $operator, $value = null, $boolean = 'and')
+ * @method $this orWhereJsonLength($column, $operator, $value = null)
+ * @method $this dynamicWhere($method, $parameters)
+ * @method $this groupBy(...$groups)
+ * @method $this having($column, $operator = null, $value = null, $boolean = 'and')
+ * @method $this orHaving($column, $operator = null, $value = null)
+ * @method $this havingRaw($sql, array $bindings = [], $boolean = 'and')
+ * @method $this orHavingRaw($sql, array $bindings = [])
+ * @method $this latest($column = 'created_at')
+ * @method $this oldest($column = 'created_at')
+ * @method $this inRandomOrder($seed = '')
+ * @method $this forPage($page, $perPage = 15)
+ * @method $this forPageAfterId($perPage = 15, $lastId = 0, $column = 'id')
+ * @method $this union($query, $all = false)
+ * @method $this unionAll($query)
+ * @method $this lock($value = true)
+ * @method $this lockForUpdate()
+ * @method $this sharedLock()
+ * @method $this value($column)
+ * @method $this exists()
+ * // MYSQL LIBRARY END
+ * @return Model
  */
 class Model extends Straw implements Db{
 
@@ -39,6 +123,25 @@ class Model extends Straw implements Db{
 
     //当前配置 -> database
     protected static $dbArr = [];
+
+    /**
+     * @param $name
+     * @param $arguments
+     * @return Model
+     */
+    public function __call($name, $arguments)
+    {
+        //其他方法默认读
+        if (!$arguments['_connectType']){
+            $this->_getConnect('read');
+        }else{
+            $this->_getConnect($arguments['_connectType']);
+        }
+        //通过 驱动类 db() 方法问题 扩展方法
+        $this->db->db($name, $arguments);
+        return $this;
+    }
+
 
     /**
      * 配置数据库 懒连接
@@ -165,6 +268,11 @@ class Model extends Straw implements Db{
     private $_modelData = [];
 
     // 连贯操作 where 语句查询
+    /**
+     * @param array $where
+     * @param $column, $operator = null, $value = null, $boolean = 'and')
+     * @return Model
+     */
     // * @param string|array|object $query  查询条件
     public function query($where = []): Model {
 

@@ -193,7 +193,7 @@ class DataViewObject implements \JsonSerializable, Persistable {
 
         //没有传入原字段名 不走set
         if (!$propName) {
-            $this->$alias = $value;
+            $this->{'_' . $alias} = $value;
         }else{
             if (!property_exists($this, $propName))
                 throw new \Exception(sprintf("Alias's property %s not found.", $propName));
@@ -221,7 +221,7 @@ class DataViewObject implements \JsonSerializable, Persistable {
      */
     public function _setArrayAlias($propName, $alias, array $value): DataViewObject{
         if (!$propName){
-            $this->$alias = $value;
+            $this->{'_' . $alias} = $value;
         }else {
             if (!property_exists($this, $propName))
                 throw new \Exception(sprintf("Alias's property %s not found.", $propName));
