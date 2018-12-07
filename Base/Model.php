@@ -40,37 +40,6 @@ class Model extends Straw implements Db{
     //当前配置 -> database
     protected static $dbArr = [];
 
-    ////设置 $_id 自动取一条数据
-    //protected $_value = NULL;
-    //
-    //// 设置更新的字段名称
-    //protected $_field = 'id';
-
-    ////快速更新值
-    //public function __set(string $name, string $value): bool {
-    //
-    //    if (!is_null($this->_value)) {
-    //        return $this->update([$name => $value], [$this->_field => $this->_value]) ? TRUE : FALSE;
-    //    }
-    //
-    //}
-    //
-    ////如果设置了 $_id 自动取 该数据值
-    //public function __get(string $name = '_ALL_') {
-    //
-    //    if (!is_null($this->_value)) {
-    //
-    //        $data = $this->query([$this->_field => $this->_value])->getOne();
-    //
-    //        if ($name == '_ALL_') {
-    //            return $data ?? null;
-    //        } else {
-    //            return $data[$name] ?? null;
-    //        }
-    //    }
-    //}
-
-
     /**
      * 配置数据库 懒连接
      * Model constructor.
@@ -124,6 +93,7 @@ class Model extends Straw implements Db{
         //驱动是否存在
         // db namespace
         $dbClass = '\\Strawframework\\Db\\' . $dbClass;
+
         if (FALSE === class_exists($dbClass))
             throw new \Exception(sprintf('Database driver %s not found.', $dbClass));
 
@@ -144,7 +114,8 @@ class Model extends Straw implements Db{
                     'username' => $userArray[$key] ?: $userArray[0],
                     'password' => $pwdArray[$key] ?: $pwdArray[0],
                     'dbname'   => $this->dbName,
-                    'charset'  => self::$dbArr[$this->dbTag]['DB_CHARSET']
+                    'charset'  => self::$dbArr[$this->dbTag]['DB_CHARSET'] ?? 'UTF8',
+                    'prefix'  => self::$dbArr[$this->dbTag]['DB_PREFIX'] ?? ''
                 ];
             }
             unset($portArray, $userArray, $pwdArray);
@@ -181,7 +152,8 @@ class Model extends Straw implements Db{
                                          'username' => self::$dbArr[$this->dbTag]['DB_USER'],
                                          'password' => self::$dbArr[$this->dbTag]['DB_PWD'],
                                          'dbname'   => $this->dbName,
-                                         'charset'  => self::$dbArr[$this->dbTag]['DB_CHARSET'],
+                                         'charset'  => self::$dbArr[$this->dbTag]['DB_CHARSET'] ?? 'UTF8',
+                                         'prefix'  => self::$dbArr[$this->dbTag]['DB_PREFIX'] ?? ''
                                      ]);
         }
         //选择待操作表
@@ -285,12 +257,10 @@ class Model extends Straw implements Db{
     }
 
     /**
-     * 写入新数据 $data
-     * @param array | object $data
-     * @param array $args
+     * 写入新数据 $data $dvo or [$dvo,$dvo2]
+     * @param array|object $data
      *
-     * @return InsertOneResult | InsertManyResult
-     * @throws \Exception
+     * @return bool|mixed|InsertManyResult|InsertOneResult
      */
     public function insert($data) {
         $this->_getConnect('write');

@@ -1,29 +1,63 @@
 <?php
 namespace Strawframework\Db;
 
-use \PDO;
-use Strawframework\Protocol\Db;
+use Illuminate\Database\Capsule\Manager as Capsule;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\QueryException;
+use Illuminate\Events\Dispatcher;
+use Illuminate\Container\Container;
+use Strawframework\Base\DataViewObject;
+use Strawframework\Straw;
 
-class Mysql implements Db {
-
-    //pdo obj
-    private $pdo;
+class Mysql extends Straw implements \Strawframework\Protocol\Db {
 
     //model 中执行的 sql
     private $sqlQuery = '';
 
+    //数据库对象
+    /*
+     * @var Capsule
+     */
+    private $db;
+
     //操作表
-    private $table = '';
+    /**
+     * @var Builder
+     */
+    private $table;
 
-    public function __construct($config = '') {
+    public function __construct($config) {
+        parent::__construct();
 
-        $dsn = 'mysql:dbname=' . $config['dbname'] . ';host=' . $config['host'] . ';port=' . $config['port'];
-        try {
-            $this->pdo = new PDO($dsn, $config['username'], $config['password']);
-            $this->pdo->exec('SET CHARACTER SET ' . $config['charset']);
-        } catch (\Exception $e) {
-            ex($e->getMessage(), $e->getTraceAsString(), 'DB CONNECT ERROR!');
+        $capsule = self::$container->{__CLASS__ . json_encode($config)};
+
+        if (!$capsule) {
+
+            $capsule = new Capsule;
+
+            $capsule->addConnection([
+                                        'driver'    => 'mysql',
+                                        'host'      => $config['host'],
+                                        'database'  => $config['dbname'],
+                                        'username'  => $config['username'],
+                                        'password'  => $config['password'],
+                                        'charset'   => $config['charset'],
+                                        'collation' => $config['collation'] ?? 'utf8_unicode_ci',
+                                        'prefix'    => $config['prefix'],
+                                    ]);
+
+            // Set the event dispatcher used by Eloquent models... (optional)
+            $capsule->setEventDispatcher(new Dispatcher(new Container));
+
+            // Make this Capsule instance available globally via static methods... (optional)
+            $capsule->setAsGlobal();
+
+            // Setup the Eloquent ORM... (optional; unless you've used setEventDispatcher())
+            $capsule->bootEloquent();
+            self::$container->{__CLASS__ . json_encode($config)} = $capsule;
         }
+
+        $this->db = $capsule;
     }
 
     public function __destruct() {
@@ -35,7 +69,7 @@ class Mysql implements Db {
      *  选择表
      */
     public function setTable($table) {
-        $this->table = $table;
+        $this->table = $this->db->table($table);
     }
 
     //设置最后执行的sql
@@ -48,24 +82,69 @@ class Mysql implements Db {
         return $this->sqlQuery;
     }
 
-    //field array 形式 解成 字符串
-    private function getFieldViaArr($arrayField){
+    /**
+     * 解析 DVO
+     * @param      $dvos
+     * @param bool $genId 需要生成 _id
+     *
+     * @return array
+     * @throws \Exception
+     */
+    private function parseDVO($dvos, ? array $dataQuery = []): array {
 
-        $newField = '';
-        $falseField = [];
-        foreach ($arrayField as $key => $value) {
-            if (false != $value) {
-                if ($newField) {
-                    $newField .= ' , ';
-                }
-                $newField .= '`' . $value . '`';
-            } else {
-                //如果有 false 的 field 则显示其他所有 field
-                $falseField[] = '`' . $key . '`,';
-            }
+        $dvoArr = [];
+        if (!is_array($dvos))
+            $dvoArr[0] = $dvos;
+        else{
+            $dvoArr = $dvos;
         }
-        return str_replace($falseField, '', $newField ?: $this->getAllField());
+
+        $data = [];
+        foreach ($dvoArr as $key => $dvo) {
+
+            if (!($dvo instanceof DataViewObject))
+                throw new \Exception(sprintf('Data %s must instance of DVO.', var_export($dvo, true)));
+
+            $data[$key] = $dvo->getDvos();
+
+            //绑定 data
+            if (!empty($dataQuery))
+                $data[$key] = $this->bindQuery($dataQuery, $data[$key]);
+        }
+        return is_array($dvos) ? $data : current($data);
     }
+
+    /**
+     * 开始绑定 :column
+     * @param array $query
+     * @param array $data
+     *
+     * @return array
+     * @throws \Exception
+     */
+    private function bindQuery(array $query, array $data): array{
+
+        $bindedData = [];
+
+        foreach ($query as $key => $value) {
+
+            if (is_array($value)){
+
+                $bindedData[$key] = $this->bindQuery($value, $data);
+            }else{
+                //是待绑定数据
+                if (':' == $value[0]){
+                    $k = substr($value, 1);
+                    if (!key_exists($k, $data))
+                        throw new \Exception(sprintf('Bind key %s not found in DVO.', $k));
+                    $bindedData[$key] = $data[$k];
+                }
+            }
+
+        }
+        return $bindedData;
+    }
+
 
     /**
      * 组合条件的数据查询
@@ -141,7 +220,6 @@ class Mysql implements Db {
             $table = $this->table;
         }
 
-        return '*';
         $field = array_column($this->doQuery(sprintf('SHOW COLUMNS FROM `%s`', addslashes($table))), 'Field');
 //        $field = array_column($this->doQuery('SHOW COLUMNS FROM `'. $table .'`'), 'Field');
         $field = '`' . implode('`, `', $field) . '`';
@@ -223,8 +301,8 @@ class Mysql implements Db {
      * @param string $ftype
      * @param int    $type
      */
-    public function getQuery($sql, $data = [], $type = PDO::FETCH_ASSOC) {
-        return $this->doQuery($sql, $data, 'all', $type);
+    public function getQuery() {
+        //return $this->doQuery($sql, $data, 'all', $type);
     }
 
     /**
@@ -304,106 +382,56 @@ class Mysql implements Db {
     }
 
     /**
-     * insert 执行 sql 示例
+     * 插入数据
+     * @param array $data
      *
-     * @return [type] [description]
+     * @return bool|mixed
+     * @throws \Exception
      */
-    public function insert($data, $args = []) {
-        if (!$this->table) {
-            ex('table not found');
-        }
-
-        if (!$data || !is_array($data)){
-            ex('Insert data must be an array');
-        }
-
-        $colName = [];
-        $colValue = [];
-        foreach ($data as $key => $value) {
-            $colName[] = '`' . addslashes($key) . '`';
-            $colValue[] = ':' . $key;
-        }
-        $sql = 'INSERT INTO `' . $this->table . '` (' . implode(',', $colName) . ') VALUES (' . implode(',', $colValue) . ')';
+    public function insert($data, $options = []) {
         try {
-            $sth = $this->pdo->prepare($sql);
-            $this->_setLastSql($this->_interpolateQuery($sql, $data));
-            if (FALSE === $sth->execute($data)) {
-                $error = $sth->errorInfo();
-                throw new \Exception(sprintf("%s ".PHP_EOL."Last Sql: %s ".PHP_EOL."%s", $error[2], $this->getLastSql(), $error[1]));
+            if (!$this->table)
+                throw new \Exception('Please set table first.');
+
+            $allData = $this->parseDVO($data, null);
+            //$res = new \stdClass();
+            //有选项返回最后插入的 id
+            if (true == $options['lastid']){
+                $res = $this->table->insertGetId($allData);
+            }else{
+                $res = $this->table->insert($allData);
             }
-            return $this->getLastId();
-        } catch (\Exception $e) {
-            ex("Mysql Insert Error: ", $e->getMessage() . PHP_EOL . $e->getTraceAsString(), 'DB ERROR');
+            return $res;
+        } catch (QueryException $e) {
+            throw new \Exception(sprintf("Mysql insert error %s. - Last Query: %s", $e->getMessage(), $this->getLastSql()));
         }
     }
 
     /**
-     * 取最后一次 插入的 id
-     * @return [type] [description]
-     */
-    public function getLastId() {
-        return $this->pdo->lastInsertId();
-    }
-
-    /**
-     * 更新数据库
+     * 更新数据
+     * @param       $setData
+     * @param       $condition
+     * @param array $data
      *
-     * @param  [type] $data      [description]
-     * @param  [type] $condition [description]
-     *
-     * @return [type]            [description]
+     * @return int|mixed
+     * @throws \Exception
      */
-    public function update($data, $condition, $args=[]) {
+    public function update($setData, $condition, $data = []) {
 
-        if (!$this->table) {
-            ex('table not found');
-        }
+        try{
+            if (!$this->table)
+                throw new \Exception('Please set table first.');
 
-        if (!$data)
-            ex('Update data can not empty !');
+            //不允许条件为空 防止全表更新
+            if (!$condition)
+                throw new \Exception('Condition can not empty.');
 
-        //防止更新全部数据
-        if (!$condition) {
-            ex('Update conditions can not empty !');
-        }
+            $condition = $this->parseDVO($condition, $data);
 
-        if (is_array($data)){
-            $colName = [];
-            foreach ($data as $key => $value) {
-                $colName[] = '`' . addslashes($key) . '` = ?';
-            }
-            $set = implode(',', $colName);
-        }else{
-            $set = $data;
-        }
-
-        if (is_array($condition)) {
-            $condName = [];
-            foreach ($condition as $key => $value) {
-                $condName[] = '`' . addslashes($key) . '` = ?';
-            }
-            $where = implode(' AND ', $condName);
-        }else{
-            $where = $condition;
-        }
-        $sql = 'UPDATE `' . $this->table . '` SET ' . $set . ' WHERE ' . $where . '';
-
-        // print_r($sql);
-        try {
-            if (!is_array($condition)){
-                $condition = [];
-            }
-            $bindData = array_merge(array_values($data), array_values($condition));
-            $sth = $this->pdo->prepare($sql);
-            $this->_setLastSql($this->_interpolateQuery($sql, $bindData));
-            if (FALSE === $sth->execute($bindData)) {
-                //print_r($sth->errorInfo());die;
-                $error = $sth->errorInfo();
-                throw new \Exception(sprintf("%s ". PHP_EOL . "Last Sql: %s " . PHP_EOL . "%s", $error[2], $this->getLastSql(), $error[1]));
-            }
-            return true;
-        } catch (\Exception $e) {
-            ex("Mysql Update Error: ", $e->getMessage() . PHP_EOL . $e->getTraceAsString(), 'Db Error');
+            $res = $this->table->where($condition)->update($setData);
+            return $res;
+        } catch (QueryException $e) {
+            throw new \Exception(sprintf("Mysql update error %s. - Last Query: %s", $e->getMessage(), $this->getLastSql()));
         }
     }
 

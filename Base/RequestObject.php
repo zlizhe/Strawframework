@@ -38,7 +38,7 @@ class RequestObject{
             $name = substr($reqName, 3);
             $propertyName = lcfirst($name);
             if (!property_exists($this, $propertyName)){
-                throw new \Exception(sprintf('Property not found %s', $name), Code::FAIL);
+                throw new \Exception(sprintf('Property %s not found in %s.', $name, get_called_class()), Code::FAIL);
             }else{
                 return $this->{$propertyName};
             }

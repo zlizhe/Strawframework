@@ -110,7 +110,7 @@ class Straw {
         $cname = sprintf("Controller\\%s\\%s", $v, $c);
         $reflection = new \ReflectionClass($cname);
         $classDoc = $reflection->getDocComment();
-        preg_match('/@Ro\s*\(name=[\'|\"](\w+)[\'|\"]\)/i', $classDoc, $roArr);
+        preg_match('/@Ro\s*\(\s*name\s*=\s*[\'|\"]?(\w+)[\'|\"]?\s*\)/i', $classDoc, $roArr);
         $ro = $roArr[1];
 
         //Controller 有 Ro
@@ -124,8 +124,8 @@ class Straw {
         foreach ($methods as $key => $method) {
             //方法的注释
             $requestDoc = $method->getDocComment();
-            preg_match('/@Request\s*\(uri=[\'|\"](\/?[\w|-]*)[\'|\"]\s*,\s*target=[\'|\"](' . implode('|', self::AVAILABLE_METHODS) . ')[\'|\"]\)/i', $requestDoc, $requestRouter);
-            preg_match('/@Required\s*\(column=[\'|\"]([\w|-|\s|,]+)[\'|\"]\)/i', $requestDoc, $requiredArr);
+            preg_match('/@Request\s*\(\s*uri\s*=\s*[\'|\"](\/?[\w|-]*)[\'|\"]\s*,\s*target\s*=\s*[\'|\"](' . implode('|', self::AVAILABLE_METHODS) . ')[\'|\"]\s*\)/i', $requestDoc, $requestRouter);
+            preg_match('/@Required\s*\(\s*column\s*=\s*[\'|\"]([\w|-|\s|,]+)[\'|\"]\)\s*/i', $requestDoc, $requiredArr);
             list($requet, $action, $target) = $requestRouter;
             //有路由的配置
             if (!empty($action) && !empty($target)) {
@@ -145,7 +145,9 @@ class Straw {
         }
 
         if (FALSE == $requestDocs[$a][$rMethod]) {
-            throw new \Exception(sprintf("Router error, can not found uri %s.", $a));
+            if (false == APP_DEBUG)
+                $requestDocs = [];
+            throw new \Exception(sprintf("Router error, can not found uri %s. Router requests: %s", $a, var_export($requestDocs)));
         }
 
         //设置当前  controller action name
