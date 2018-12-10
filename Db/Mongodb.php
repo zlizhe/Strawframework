@@ -134,11 +134,13 @@ class Mongodb implements Db {
                 $data[$key]['_id'] = new ObjectId();
             }
 
+            preg_match('/(\b_\w+)/', json_encode($data[$key]), $matches);
+
             //绑定 data
             if (!empty($dataQuery)){
                 $data[$key] = $this->bindQuery($dataQuery, $data[$key]);
-            }else if (!empty($matchs)){
-                throw new \Exception(sprintf('Data %s with DVO Alias must bind from ->data method.', var_dump($dvo, true)));
+            }else if (!empty($matches)){
+                throw new \Exception(sprintf('Data %s with DVO Alias must bind from ->data method.', json_encode($data[$key])));
             }
 
             //解析特殊字

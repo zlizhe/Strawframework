@@ -104,12 +104,13 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
 
             $data[$key] = $dvo->getDvos();
 
-            preg_match('/_/', json_encode($data), $matchs);
+            preg_match('/(\b_\w+)/', json_encode($data[$key]), $matches);
+
             //绑定 data
             if (!empty($dataQuery)){
                 $data[$key] = $this->bindQuery($dataQuery, $data[$key]);
-            }else if (!empty($matchs)){
-                throw new \Exception(sprintf('Data %s with DVO Alias must bind from ->data method.', var_dump($dvo, true)));
+            }else if (!empty($matches)){
+                throw new \Exception(sprintf('Data %s with DVO Alias must bind from ->data method.', json_encode($data[$key])));
             }
         }
         return is_array($dvos) ? $data : current($data);
@@ -260,7 +261,7 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
             if (!empty(self::$dbFuns)){
                 foreach (self::$dbFuns as $fun) {
                     foreach ($fun as $k => $f) {
-                        call_user_func_array([$this->table, $k], $f);
+                        call_user_func([$this->table, $k], $f);
                     }
                 }
                 self::$dbFuns = [];
@@ -277,7 +278,26 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
 
     //获取行数
     public function count($query = '', $countField = '*', $data = []){
-        return $this->getOne($query, "count($countField) AS count", $data)['count'];
+
+        try {
+
+            $this->parseModelData(compact('query', 'data'));
+
+            if (!empty(self::$dbFuns)){
+                foreach (self::$dbFuns as $fun) {
+                    foreach ($fun as $k => $f) {
+                        call_user_func([$this->table, $k], $f);
+                    }
+                }
+                self::$dbFuns = [];
+            }
+
+            $res = $this->table->count($countField);
+
+            return $res;
+        }catch (\Exception $e){
+            throw new \Exception(sprintf("Mysql count error %s.", $e->getMessage()));
+        }
     }
 
     /**
