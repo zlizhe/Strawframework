@@ -1,6 +1,7 @@
 <?php
 namespace Strawframework\Base;
 
+use Doctrine\DBAL\Driver\PDOException;
 use MongoDB\BSON\ObjectID;
 use MongoDB\BSON\UTCDateTime;
 use Strawframework\Common\Code;
@@ -99,7 +100,16 @@ class RequestObject{
                 throw new \Exception('Request method not invalid', Code::NOT_ALLOW);
         }
         self::$call = $params;
-        unset($_REQUEST);
+
+        //测试环境提示参数问题
+        if (true == APP_DEBUG){
+            unset($_REQUEST);
+
+            $diffParams = array_diff(array_keys($params), array_keys(get_object_vars($this)));
+            if (!empty($diffParams)){
+                throw new \Exception(sprintf('Params %s not in Ro. This message just show on APP_DEBUG.', implode(',', $diffParams)));
+            }
+        }
 
         foreach ($this as $key => $column) {
             $tmpValue = $params[$requests[$key]['name']];

@@ -15,6 +15,7 @@ use MongoDB\Operation\UpdateOne;
 use MongoDB\UpdateResult;
 use Strawframework\Base\DataViewObject;
 use Strawframework\Protocol\Db;
+use Strawframework\Straw;
 
 /**
  * mongodb php Library
@@ -22,7 +23,7 @@ use Strawframework\Protocol\Db;
  * http://php.net/mongodb
  */
 
-class Mongodb implements Db {
+class Mongodb extends Straw implements Db {
 
     //db obj
     private $db;
@@ -56,25 +57,30 @@ class Mongodb implements Db {
         if (!extension_loaded("mongodb"))
             throw new \Exception('Mongodb extend mongodb not found.');
 
-        try {
-            //mongo connect link
-            if ($config['username']){
-                $mongoConnect = sprintf('mongodb://%s:%s@%s:%d', $config['username'], $config['password'], $config['host'], $config['port']);
-            }else{
-                $mongoConnect = sprintf('mongodb://%s:%d', $config['host'], $config['port']);
-            }
-            /**
-             * http://php.net/manual/zh/mongodb-driver-manager.construct.php
-             * uriOptions and driverOptions
-             */
-            $this->connect = new \MongoDB\Client($mongoConnect);
-        } catch (\MongoConnectionException | \Exception $e) {
-            throw new \Exception(sprintf("Mongodb connect error : ", $e->getMessage()));
-        }
-        //连接 current db 
-        $this->db = $config['dbname'];
+        $this->db = self::$container->{__CLASS__ . json_encode($config)};
 
-        unset($mongoConnect, $config);
+        if (!$this->db) {
+            try {
+                //mongo connect link
+                if ($config['username']) {
+                    $mongoConnect = sprintf('mongodb://%s:%s@%s:%d', $config['username'], $config['password'], $config['host'], $config['port']);
+                } else {
+                    $mongoConnect = sprintf('mongodb://%s:%d', $config['host'], $config['port']);
+                }
+                /**
+                 * http://php.net/manual/zh/mongodb-driver-manager.construct.php
+                 * uriOptions and driverOptions
+                 */
+                $this->connect = new \MongoDB\Client($mongoConnect);
+            } catch (\MongoConnectionException | \Exception $e) {
+                throw new \Exception(sprintf("Mongodb connect error : ", $e->getMessage()));
+            }
+            //连接 current db
+            $this->db = $config['dbname'];
+
+            unset($mongoConnect);
+            self::$container->{__CLASS__ . json_encode($config)} = $this->db;
+        }
         //每次都重新选择表
         $this->collection = null;
         //清空当前 查询语句

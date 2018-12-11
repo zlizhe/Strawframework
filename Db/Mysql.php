@@ -104,14 +104,15 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
 
             $data[$key] = $dvo->getDvos();
 
-            preg_match('/(\b_\w+)/', json_encode($data[$key]), $matches);
+            //preg_match('/(\b_\w+)/', json_encode($data[$key]), $matches);
 
             //绑定 data
             if (!empty($dataQuery)){
                 $data[$key] = $this->bindQuery($dataQuery, $data[$key]);
-            }else if (!empty($matches)){
-                throw new \Exception(sprintf('Data %s with DVO Alias must bind from ->data method.', json_encode($data[$key])));
             }
+            //else if (!empty($matches)){
+            //    throw new \Exception(sprintf('Data %s with DVO Alias must bind from ->data method.', json_encode($data[$key])));
+            //}
         }
         return is_array($dvos) ? $data : current($data);
     }
@@ -241,6 +242,27 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
     }
 
     /**
+     * 驱动自带方法 dvo 绑定
+     * @param $query
+     *
+     * @throws \Exception
+     */
+    private function callDriverBind($query){
+        if (!empty(self::$dbFuns)){
+            foreach (self::$dbFuns as $fun) {
+                foreach ($fun as $k => $f) {
+                    //$f 绑定 dvo
+                    $nf = $this->parseDVO($query, [$f[0] => end($f)])[$f[0]];
+                    unset($query->{substr(end($f), 1)});
+                    $f[count($f) - 1] = $nf;
+                    call_user_func_array([$this->table, $k], $f);
+                }
+            }
+            self::$dbFuns = [];
+        }
+    }
+
+    /**
      * 组合条件的数据查询
      *
      * @param string       $table  数据表
@@ -250,25 +272,16 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
      * @param int          $offset 数据偏移量
      * @param int          $limit  取数据条数
      *
-     * @return Builder
      */
     public function getAll($query = '', $field = [], $order = '', $offset = NULL, $limit = NULL, $data = []) {
 
         try {
 
+            $this->callDriverBind($query);
+
             $this->parseModelData(compact('query', 'field', 'order', 'offset', 'limit', 'data'));
 
-            if (!empty(self::$dbFuns)){
-                foreach (self::$dbFuns as $fun) {
-                    foreach ($fun as $k => $f) {
-                        call_user_func([$this->table, $k], $f);
-                    }
-                }
-                self::$dbFuns = [];
-            }
-
             $res = $this->table->get();
-
             return $res;
         }catch (\Exception $e){
             throw new \Exception(sprintf("Mysql getAll error %s.", $e->getMessage()));
@@ -281,16 +294,9 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
 
         try {
 
-            $this->parseModelData(compact('query', 'data'));
+            $this->callDriverBind($query);
 
-            if (!empty(self::$dbFuns)){
-                foreach (self::$dbFuns as $fun) {
-                    foreach ($fun as $k => $f) {
-                        call_user_func([$this->table, $k], $f);
-                    }
-                }
-                self::$dbFuns = [];
-            }
+            $this->parseModelData(compact('query', 'data'));
 
             $res = $this->table->count($countField);
 

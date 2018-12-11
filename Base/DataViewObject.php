@@ -16,6 +16,12 @@ class DataViewObject implements \JsonSerializable, Persistable {
         return ['trim'];
     }
 
+    //unset($name) 快速删除
+    public function __unset($name)
+    {
+        unset($this->$name);
+    }
+
     /**
      * @param $colName
      * @param $param
