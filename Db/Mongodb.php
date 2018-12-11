@@ -57,9 +57,9 @@ class Mongodb extends Straw implements Db {
         if (!extension_loaded("mongodb"))
             throw new \Exception('Mongodb extend mongodb not found.');
 
-        $this->db = self::$container->{__CLASS__ . json_encode($config)};
+        $mongoHandle = self::$container->{__CLASS__ . json_encode($config)};
 
-        if (!$this->db) {
+        if (!$mongoHandle) {
             try {
                 //mongo connect link
                 if ($config['username']) {
@@ -71,16 +71,19 @@ class Mongodb extends Straw implements Db {
                  * http://php.net/manual/zh/mongodb-driver-manager.construct.php
                  * uriOptions and driverOptions
                  */
-                $this->connect = new \MongoDB\Client($mongoConnect);
+                $mongoHandle = new \MongoDB\Client($mongoConnect);
             } catch (\MongoConnectionException | \Exception $e) {
                 throw new \Exception(sprintf("Mongodb connect error : ", $e->getMessage()));
             }
-            //连接 current db
-            $this->db = $config['dbname'];
 
             unset($mongoConnect);
-            self::$container->{__CLASS__ . json_encode($config)} = $this->db;
+            self::$container->{__CLASS__ . json_encode($config)} = $mongoHandle;
         }
+
+        $this->connect = $mongoHandle;
+
+        //连接 current db
+        $this->db = $config['dbname'];
         //每次都重新选择表
         $this->collection = null;
         //清空当前 查询语句

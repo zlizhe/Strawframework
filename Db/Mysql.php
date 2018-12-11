@@ -55,7 +55,7 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
             $capsule->setAsGlobal();
 
             // Setup the Eloquent ORM... (optional; unless you've used setEventDispatcher())
-            $capsule->bootEloquent();
+            //$capsule->bootEloquent();
             self::$container->{__CLASS__ . json_encode($config)} = $capsule;
         }
 
@@ -104,15 +104,15 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
 
             $data[$key] = $dvo->getDvos();
 
-            //preg_match('/(\b_\w+)/', json_encode($data[$key]), $matches);
+            preg_match('/(\b_\w+)/', json_encode($data[$key]), $matches);
 
             //绑定 data
             if (!empty($dataQuery)){
                 $data[$key] = $this->bindQuery($dataQuery, $data[$key]);
             }
-            //else if (!empty($matches)){
-            //    throw new \Exception(sprintf('Data %s with DVO Alias must bind from ->data method.', json_encode($data[$key])));
-            //}
+            else if (!empty($matches)){
+                throw new \Exception(sprintf('Data %s with DVO Alias must bind from ->data method.', json_encode($data[$key])));
+            }
         }
         return is_array($dvos) ? $data : current($data);
     }
@@ -252,9 +252,9 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
             foreach (self::$dbFuns as $fun) {
                 foreach ($fun as $k => $f) {
                     //$f 绑定 dvo
-                    $nf = $this->parseDVO($query, [$f[0] => end($f)])[$f[0]];
-                    unset($query->{substr(end($f), 1)});
-                    $f[count($f) - 1] = $nf;
+                    //$nf = $this->parseDVO($query, [$f[0] => end($f)])[$f[0]];
+                    //unset($query->{substr(end($f), 1)});
+                    //$f[count($f) - 1] = $nf;
                     call_user_func_array([$this->table, $k], $f);
                 }
             }
@@ -309,48 +309,18 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
     /**
      * 根据条件查询一条结果
      */
-    public function getOne($query = '', $field = '', $data = []) {
-        //获取所有字段
-        if (!$field) {
-            $field = $this->getAllField();
+    public function getOne($query = '', $field = [], $data = []) {
+        try{
+
+            $this->callDriverBind($query);
+
+            $this->parseModelData(compact('query', 'field', 'data'));
+
+            $res = $this->table->first();
+            return $res;
+        }catch (\Exception $e){
+            throw new \Exception(sprintf("Mysql getOne error %s.", $e->getMessage()));
         }
-
-        if (is_array($field)) {
-
-            $field = $this->getFieldViaArr($field);
-        }
-
-        $sql = "SELECT " . $field . " FROM `" . $this->table . "`";
-
-        //处理 query
-        if (is_array($query)) {
-            //无视 data 传值
-            $data = [];
-            $map = '';
-            foreach ($query as $key => $value) {
-                if ($map) {
-                    $map .= ' AND ';
-                }
-                $map .= '`'.addslashes($key).'` = ?';
-                $data[] = $value;
-            }
-            $sql .= " WHERE " . $map;
-        } else if ($query) {
-            $sql .= " " . $query;
-        }
-
-        return $this->doQuery($sql, $data, 'row', PDO::FETCH_ASSOC);
-    }
-
-    /**
-     * 获取一行数据 一个col
-     * @param     $sql
-     * @param int $type
-     *
-     * @return mixed
-     */
-    public function getCol($sql, $col = 0, $data = []) {
-        return $this->doQuery($sql, $data, 'row', PDO::FETCH_NUM)[$col];
     }
 
     /**
@@ -393,70 +363,59 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
     /**
      * 更新数据
      * @param       $setData
-     * @param       $condition
+     * @param       $query
      * @param array $data
      *
      * @return int|mixed
      * @throws \Exception
      */
-    public function update($setData, $condition, $data = []) {
+    public function update($setData, $query, $data = []) {
 
         try{
             if (!$this->table)
                 throw new \Exception('Please set table first.');
 
             //不允许条件为空 防止全表更新
-            if (!$condition)
-                throw new \Exception('Condition can not empty.');
+            if (!$query)
+                throw new \Exception('Condition can not be empty.');
 
-            $condition = $this->parseDVO($condition, $data);
 
-            $res = $this->table->where($condition)->update($setData);
+            $this->callDriverBind($query);
+
+            $this->parseModelData(compact('query', 'data'));
+
+            $setData = $this->parseDVO($setData, null);
+            $res = $this->table->update($setData);
             return $res;
         } catch (QueryException $e) {
-            throw new \Exception(sprintf("Mysql update error %s. - Last Query: %s", $e->getMessage(), $this->getLastSql()));
+            throw new \Exception(sprintf("Mysql update error %s.", $e->getMessage()));
         }
     }
 
     /**
      *  删除数据
+     * @throws \Exception
      */
-    public function delete($condition) {
-        if (!$this->table) {
-            ex("Table not found !");
-        }
+    public function delete($query, $data = []) {
 
-        if (!$condition) {
-            ex('Delete Conditions can not empty!');
-        }
 
-        if (is_array($condition)) {
-            $condName = [];
-            foreach ($condition as $key => $value) {
-                $condName[] = '`' . addslashes($key) . '` = ?';
-            }
-            $where = implode(' AND ', $condName);
-        }else{
-            $where = $condition;
-        }
+        try{
+            if (!$this->table)
+                throw new \Exception('Please set table first.');
 
-        $sql = 'DELETE FROM `' . $this->table . '` WHERE ' . $where . '';
+            //不允许条件为空 防止全表更新
+            if (!$query)
+                throw new \Exception('Condition can not be empty.');
 
-        // print_r($sql);
-        try {
-            $sth = $this->pdo->prepare($sql);
-            $this->_setLastSql($sth->queryString);
-            if (!is_array($condition)){
-                $condition = [];
-            }
-            if (FALSE === $sth->execute(array_values($condition))) {
-                //print_r($sth->errorInfo());die;
-                $error = $sth->errorInfo();
-                throw new \Exception(sprintf("%s " . PHP_EOL . "Last Sql : %s" . PHP_EOL . "%s", $error[2], $this->getLastSql(), $error[1]));
-            }
-            return true;
-        } catch (\Exception $e) {
-            ex('Mysql Delete Error', $e->getMessage() . PHP_EOL . $e->getTraceAsString(), 'Db Error');
+
+            $this->callDriverBind($query);
+
+            $this->parseModelData(compact('query', 'data'));
+
+            $res = $this->table->delete();
+            return $res;
+        } catch (QueryException $e) {
+            throw new \Exception(sprintf("Mysql delete error %s.", $e->getMessage()));
         }
     }
 }

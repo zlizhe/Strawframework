@@ -390,8 +390,8 @@ class Model extends Straw implements Db{
 
         $this->_setCanEmpty(['query' => [], 'data' => [], 'options' => [], 'field' => '', 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
 
-        if (!$this->_modelData['query'])
-            throw new \Exception('Query is empty.');
+        //if (!$this->_modelData['query'])
+        //    throw new \Exception('Query is empty.');
 
         //自动生成 cachekey
         if (TRUE === $this->_modelData['cacheKey']) {

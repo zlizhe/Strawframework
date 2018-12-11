@@ -22,7 +22,7 @@ class MysqlPDO implements Db {
             $this->pdo = new PDO($dsn, $config['username'], $config['password']);
             $this->pdo->exec('SET CHARACTER SET ' . $config['charset']);
         } catch (\Exception $e) {
-            ex($e->getMessage(), $e->getTraceAsString(), 'DB CONNECT ERROR!');
+            throw new \Exception(sprintf("Db connect error: %s, %s", $e->getMessage(), $e->getTraceAsString()));
         }
     }
 
@@ -227,7 +227,7 @@ class MysqlPDO implements Db {
      * @param string $ftype
      * @param int    $type
      */
-    public function getQuery($sql, $data = [], $type = PDO::FETCH_ASSOC) {
+    public function getQuery($sql = '', $data = [], $type = PDO::FETCH_ASSOC) {
         return $this->doQuery($sql, $data, 'all', $type);
     }
 
@@ -270,7 +270,7 @@ class MysqlPDO implements Db {
              */
             return $result ?: false;
         } catch (\Exception $e) {
-            ex($e->getMessage(), $e->getTraceAsString(), 'Db Error');
+            throw new \Exception(sprintf("Do query error: %s, %s", $e->getMessage(), $e->getTraceAsString()));
         }
     }
 
@@ -314,11 +314,11 @@ class MysqlPDO implements Db {
      */
     public function insert($data, $args = []) {
         if (!$this->table) {
-            ex('table not found');
+            throw new \Exception("Please set table first.");
         }
 
         if (!$data || !is_array($data)){
-            ex('Insert data must be an array');
+            throw new \Exception("Insert data must be an array.");
         }
 
         $colName = [];
@@ -337,7 +337,7 @@ class MysqlPDO implements Db {
             }
             return $this->getLastId();
         } catch (\Exception $e) {
-            ex("Mysql Insert Error: ", $e->getMessage() . PHP_EOL . $e->getTraceAsString(), 'DB ERROR');
+            throw new \Exception(sprintf("Mysql insert error: %s, %s", $e->getMessage(), $e->getTraceAsString()));
         }
     }
 
@@ -360,15 +360,15 @@ class MysqlPDO implements Db {
     public function update($data, $condition, $args=[]) {
 
         if (!$this->table) {
-            ex('table not found');
+            throw new \Exception('Please set table first.');
         }
 
         if (!$data)
-            ex('Update data can not empty !');
+            throw new \Exception('Update data can not be empty.');
 
         //防止更新全部数据
         if (!$condition) {
-            ex('Update conditions can not empty !');
+            throw new \Exception('Update conditions can not empty.');
         }
 
         if (is_array($data)){
@@ -407,7 +407,7 @@ class MysqlPDO implements Db {
             }
             return true;
         } catch (\Exception $e) {
-            ex("Mysql Update Error: ", $e->getMessage() . PHP_EOL . $e->getTraceAsString(), 'Db Error');
+            throw new \Exception(sprintf("Mysql update error: %s, %s", $e->getMessage(), $e->getTraceAsString()));
         }
     }
 
@@ -416,11 +416,11 @@ class MysqlPDO implements Db {
      */
     public function delete($condition) {
         if (!$this->table) {
-            ex("Table not found !");
+            throw new \Exception('Please set table first.');
         }
 
         if (!$condition) {
-            ex('Delete Conditions can not empty!');
+            throw new \Exception('Delete conditions can not be empty.');
         }
 
         if (is_array($condition)) {
@@ -449,7 +449,7 @@ class MysqlPDO implements Db {
             }
             return true;
         } catch (\Exception $e) {
-            ex('Mysql Delete Error', $e->getMessage() . PHP_EOL . $e->getTraceAsString(), 'Db Error');
+            throw new \Exception(sprintf("Mysql delete error: %s, %s", $e->getMessage(), $e->getTraceAsString()));
         }
     }
 
