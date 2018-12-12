@@ -1,66 +1,183 @@
 <?php
 namespace Strawframework\Base;
+
+use Elasticsearch\ClientBuilder;
+use MongoDB\Client;
+use Monolog\Formatter\ElasticaFormatter;
+use Monolog\Formatter\MongoDBFormatter;
+use Monolog\Handler\ElasticSearchHandler;
+use Monolog\Handler\MongoDBHandler;
+use Monolog\Handler\RotatingFileHandler;
+use Monolog\Handler\SwiftMailerHandler;
 use Strawframework\Straw;
 use Monolog\Logger;
-use Monolog\Handler\StreamHandler;
-use Monolog\Processor\UidProcessor;
-use Monolog\Processor\ProcessIdProcessor;
-use Monolog\Formatter\LineFormatter;
-use Monolog\Formatter\JsonFormatter;
 /**
  * User: xiuhao
  * Date: 2018/11/20
  * Time: 14:01
  * 日志基类
  */
-class Log {
+class Log{
     static public $instance;
     private  $logger;
+    private $type; //日志写入类型
+    private $level; //日志等级
 
     private function __construct(){
-        $this->logger = new Logger('mylog');
+        $this->logger = new Logger(Straw::$config['site_name']);
     }
 
     static public function getInstance(){
         if (!self::$instance instanceof self) {
-             self::$instance = new self();
-         }
+            self::$instance = new self();
+        }
         return self::$instance;
     }
 
-    public function info($msg, $context){
-        $logger = $this->logger;
-        $log = $this->getConfig('INFO');
 
-        if ($log && $log['type'] == 'FILE'){
-            $path = $log['config']['saveSrc'].'my_app.log';
-        }
-//        $formatter = $log['config']['formatter'];
-        $stream_handler = new StreamHandler($path, Logger::INFO); // 过滤级别
-        $stream_handler->setFormatter(new LineFormatter());
-
-        $logger->pushHandler($stream_handler);
-
-//        return $logger->info($msg);
-        return $logger->addInfo($msg, $context);
+    /**
+     * 设置日志类型 实际上设置的是 这个 key 下面的 type
+     *
+     * 如配置
+     * logs = [
+     *  'file1' => ['type' => 'file']
+     * ]
+     * setType('file1') 则是指定使用 file1 来写日志 类型是 file
+     */
+    public function setType($type){
+        $this->type[] = strtolower($type);
+        return $this;
     }
 
-    public function getConfig($level){
-        switch (strtoupper($level)) {
-            case "INFO":
-                $type = Straw::$config['log']['level']['INFO'];
-                break;
-            case "WARNING":
-                $type = Straw::$config['log']['level']['WARNING'];
-                break;
-            default:
-        }
-        return ['type'  => $type,
-                'config'=> Straw::$config['log']['type'][$type]
-                ];
+    //设置日志等级
+    public function setLevel($level){
+        $this->level = strtolower($level);
+        return $this;
     }
 
-    public static function warning($msg){
-        return 'warning';
+    /**
+     * Log::set('logtitle', 'msg1', 'msg2' , ['array1','arraykey' => 'value'], ['array2'])
+     *
+     * @param       $msg
+     * @param mixed ...$context
+     *
+     * @return bool
+     * @throws \Exception
+     */
+    public function set($msg, ...$context){
+        //$logger = self::$container->{md5(__CLASS__)};
+        //if (!$logger){
+        //    $logger = new Logger(Straw::$config['site_name']);
+        //    self::$container->{md5(__CLASS__)} = $logger;
+        //}
+
+        if (!$this->type)
+            $this->type[] = strtoupper(Straw::$config['log']);
+
+        //if (!$this->type)
+        //    throw new \Exception('Default log type must be set.');
+
+        //save type
+        $this->getTypeConfig();
+
+        //save level
+        if (!$this->level)
+            $this->level = 'info';
+
+        if (!method_exists($this->logger, $this->level))
+            throw new \Exception(sprintf('Log level %s can not support.', $this->level));
+
+        //总是包含的必要信息
+        //array_push($context, $this->called);
+
+        return call_user_func_array([$this->logger, $this->level], [$msg, $context]);
+    }
+
+    /**
+     * 获取该日志类型的 句柄
+     * @return mixed
+     * @throws \Exception
+     */
+    private function getTypeConfig(): void{
+
+        foreach ($this->type as $type) {
+            $config = Straw::$config['logs'][$type];
+
+            if (!$config)
+                throw new \Exception(sprintf('Log config %s can not found.', $config['type']));
+
+            $methodName = 'getType' . ucfirst(strtolower($config['type']));
+            if (!method_exists($this, $methodName))
+                throw new \Exception(sprintf('Can not support %s log type.', $config['type']));
+
+            //默认 Line
+            if (!$config['formatter'])
+                $config['formatter'] = 'Line';
+
+            $formatterCls = sprintf('\\Monolog\\Formatter\\%sFormatter', ucfirst(strtolower($config['formatter'])));
+            if (!class_exists($formatterCls))
+                throw new \Exception(sprintf('Log formatter %s can not support.', $config['formatter']));
+            $this->logger->pushHandler(call_user_func([$this, $methodName], $config, $formatterCls));
+        }
+    }
+
+    /**
+     * 写文件日志
+     * @param $config
+     *
+     * @return RotatingFileHandler
+     */
+    private function getTypeFile($config, $formatter){
+
+        $handler = new RotatingFileHandler($config['saveSrc'], $config['maxFiles'] ?? 30, True == APP_DEBUG ? Logger::DEBUG : Logger::INFO);
+        $handler->setFormatter(new $formatter());
+        $handler->setFilenameFormat('{date}' . $config['fileName'], $config['srcFormat']);
+        return $handler;
+    }
+
+    /**
+     * 发邮件日志内容
+     * @param $config
+     * @param $formatter
+     *
+     * @return SwiftMailerHandler
+     */
+    private function getTypeEmail($config, $formatter){
+
+        $transport = (new \Swift_SmtpTransport($config['smtpHost'], $config['smtpPort']))
+            ->setUsername($config['sender'])
+            ->setPassword($config['password'])
+        ;
+
+        $message = (new \Swift_Message($config['subject']))
+            ->setFrom([$config['sender'] => $config['senderName']])
+            ->setTo($config['receiver'])
+        ;
+        $handler = new SwiftMailerHandler(new \Swift_Mailer($transport), $message, Logger::ERROR);
+        $handler->setFormatter(new $formatter());
+        return $handler;
+    }
+
+    /**
+     * 写入 mongodb
+     * @param $config
+     * @param $formatter
+     *
+     * @return MongoDBHandler
+     */
+    private function getTypeMongodb($config, $formatter){
+
+        $handler = new MongoDBHandler(new Client($config['mongoConnect']), $config['dbName'], $config['collectionName'], True == APP_DEBUG ? Logger::DEBUG : Logger::INFO);
+        $handler->setFormatter(new MongoDBFormatter()); //不允许指定
+        return $handler;
+    }
+
+    private function getTypeElastic($config, $formatter){
+
+        unset($config['type'], $config['formatter']);
+        $client = \Elasticsearch\ClientBuilder::create()->setHosts($config)->build();
+        $handler = new ElasticSearchHandler($client, [], True == APP_DEBUG ? Logger::DEBUG : Logger::INFO);
+        //$handler->setFormatter(new ElasticaFormatter());
+        return $handler;
     }
 }

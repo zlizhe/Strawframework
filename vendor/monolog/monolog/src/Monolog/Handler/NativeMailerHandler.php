@@ -132,7 +132,8 @@ class NativeMailerHandler extends MailHandler
 
         $parameters = implode(' ', $this->parameters);
         foreach ($this->to as $to) {
-            mail($to, $subject, $content, $headers, $parameters);
+            $a =mail($to, $subject, $content, $headers, $parameters);
+            var_dump($parameters, $headers,  $to, $a);die;
         }
     }
 

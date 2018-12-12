@@ -31,7 +31,7 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
     public function __construct($config) {
         parent::__construct();
 
-        $capsule = self::$container->{__CLASS__ . json_encode($config)};
+        $capsule = self::$container->{md5(__CLASS__ . json_encode($config))};
 
         if (!$capsule) {
 
@@ -56,7 +56,7 @@ class Mysql extends Straw implements \Strawframework\Protocol\Db {
 
             // Setup the Eloquent ORM... (optional; unless you've used setEventDispatcher())
             //$capsule->bootEloquent();
-            self::$container->{__CLASS__ . json_encode($config)} = $capsule;
+            self::$container->{md5(__CLASS__ . json_encode($config))} = $capsule;
         }
 
         $this->db = $capsule;

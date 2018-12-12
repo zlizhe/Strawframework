@@ -75,7 +75,7 @@ final class Main{
         @ini_set('date.timezone', 'Asia/Shanghai');
 
         //runtime
-        define('RUNTIME_PATH', PROTECTED_PATH . 'Runtime' . DS);
+        define('RUNTIME_PATH', ROOT_PATH . 'Runtime' . DS);
         //logs path
         define('LOGS_PATH', RUNTIME_PATH . 'Logs' . DS);
 

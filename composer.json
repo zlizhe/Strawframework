@@ -4,6 +4,8 @@
         "monolog/monolog": "^1.24",
         "illuminate/database": "^5.7",
         "illuminate/events": "^5.7",
-        "doctrine/dbal": "^2.9"
+        "doctrine/dbal": "^2.9",
+        "swiftmailer/swiftmailer": "^6.0",
+        "elasticsearch/elasticsearch": "~6.0"
     }
 }

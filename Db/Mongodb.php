@@ -57,7 +57,7 @@ class Mongodb extends Straw implements Db {
         if (!extension_loaded("mongodb"))
             throw new \Exception('Mongodb extend mongodb not found.');
 
-        $mongoHandle = self::$container->{__CLASS__ . json_encode($config)};
+        $mongoHandle = self::$container->{md5(__CLASS__ . json_encode($config))};
 
         if (!$mongoHandle) {
             try {
@@ -77,7 +77,7 @@ class Mongodb extends Straw implements Db {
             }
 
             unset($mongoConnect);
-            self::$container->{__CLASS__ . json_encode($config)} = $mongoHandle;
+            self::$container->{md5(__CLASS__ . json_encode($config))} = $mongoHandle;
         }
 
         $this->connect = $mongoHandle;
