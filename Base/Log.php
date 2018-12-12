@@ -4,6 +4,7 @@ namespace Strawframework\Base;
 use Elasticsearch\ClientBuilder;
 use MongoDB\Client;
 use Monolog\Formatter\ElasticaFormatter;
+use Monolog\Formatter\ElasticsearchFormatter;
 use Monolog\Formatter\MongoDBFormatter;
 use Monolog\Handler\ElasticSearchHandler;
 use Monolog\Handler\MongoDBHandler;
@@ -174,9 +175,9 @@ class Log{
 
     private function getTypeElastic($config, $formatter){
 
-        unset($config['type'], $config['formatter']);
-        $client = \Elasticsearch\ClientBuilder::create()->setHosts($config)->build();
+        $client = \Elasticsearch\ClientBuilder::create()->setHosts(is_array($config['host']) ? $config['host'] : [$config['host']])->build();
         $handler = new ElasticSearchHandler($client, [], True == APP_DEBUG ? Logger::DEBUG : Logger::INFO);
+        $handler->setFormatter(new ElasticsearchFormatter());
         //$handler->setFormatter(new ElasticaFormatter());
         return $handler;
     }
