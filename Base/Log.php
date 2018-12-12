@@ -1,9 +1,7 @@
 <?php
 namespace Strawframework\Base;
 
-use Elasticsearch\ClientBuilder;
 use MongoDB\Client;
-use Monolog\Formatter\ElasticaFormatter;
 use Monolog\Formatter\ElasticsearchFormatter;
 use Monolog\Formatter\MongoDBFormatter;
 use Monolog\Handler\ElasticSearchHandler;
@@ -50,11 +48,58 @@ class Log{
         return $this;
     }
 
-    //设置日志等级
-    public function setLevel($level){
-        $this->level = strtolower($level);
-        return $this;
+    /**
+     * 从上到下 错误级别依次提升
+     * @param       $msg
+     * @param mixed ...$content
+     *
+     * @return mixed
+     */
+    public function debug($msg, ...$content){
+        $this->level = 'debug';
+        return call_user_func_array([$this, 'set'], [$msg, $content]);
     }
+
+    public function info($msg, ...$content){
+        $this->level = 'info';
+        return call_user_func_array([$this, 'set'], [$msg, $content]);
+    }
+
+    public function notice($msg, ...$content){
+        $this->level = 'notice';
+        return call_user_func_array([$this, 'set'], [$msg, $content]);
+    }
+
+    public function warning($msg, ...$content){
+        $this->level = 'warning';
+        return call_user_func_array([$this, 'set'], [$msg, $content]);
+    }
+
+    public function error($msg, ...$content){
+        $this->level = 'error';
+        return call_user_func_array([$this, 'set'], [$msg, $content]);
+    }
+
+    public function critical($msg, ...$content){
+        $this->level = 'critical';
+        return call_user_func_array([$this, 'set'], [$msg, $content]);
+    }
+
+    public function alert($msg, ...$content){
+        $this->level = 'alert';
+        return call_user_func_array([$this, 'set'], [$msg, $content]);
+    }
+
+    public function emergency($msg, ...$content){
+        $this->level = 'emergency';
+        return call_user_func_array([$this, 'set'], [$msg, $content]);
+    }
+
+    ////设置日志等级
+    //public function setLevel($level){
+    //    $this->level = strtolower($level);
+    //    return $this;
+    //}
 
     /**
      * Log::set('logtitle', 'msg1', 'msg2' , ['array1','arraykey' => 'value'], ['array2'])
@@ -65,7 +110,7 @@ class Log{
      * @return bool
      * @throws \Exception
      */
-    public function set($msg, ...$context){
+    private function set($msg, ...$context){
         //$logger = self::$container->{md5(__CLASS__)};
         //if (!$logger){
         //    $logger = new Logger(Straw::$config['site_name']);
@@ -82,14 +127,14 @@ class Log{
         $this->getTypeConfig();
 
         //save level
-        if (!$this->level)
-            $this->level = 'info';
+        //if (!$this->level)
+        //    $this->level = 'info';
 
         if (!method_exists($this->logger, $this->level))
             throw new \Exception(sprintf('Log level %s can not support.', $this->level));
 
         //总是包含的必要信息
-        //array_push($context, $this->called);
+        array_unshift($context, sprintf('%s /%s/%s/%s', $_SERVER['REQUEST_METHOD'], VERSION_NAME ?? null, CONTROLLER_NAME ?? null, ACTION_NAME ?? null));
 
         return call_user_func_array([$this->logger, $this->level], [$msg, $context]);
     }
