@@ -228,13 +228,16 @@ class Model extends Straw implements Db{
 
                 //第一台数据库为 写 其他为读
                 if ('write' == $type) {
+                    \Strawframework\Base\Log::getInstance()->debug("CONNECT TO WRITE DB", $dbClass, $this->dbArray[0]);
                     $this->db = new $dbClass($this->dbArray[0]);
                 } else {
+
                     $readArray = $this->dbArray;
                     //去除写数据库
                     unset($readArray[0]);
                     //打乱所有读数据库集
                     shuffle($readArray);
+                    \Strawframework\Base\Log::getInstance()->debug("CONNECT TO READ DB", $dbClass, $readArray[0]);
                     $this->db = new $dbClass($readArray[0]);
                 }
             } else {
@@ -246,7 +249,7 @@ class Model extends Straw implements Db{
 
 
         } else {
-
+            \Strawframework\Base\Log::getInstance()->debug("CONNECT TO DB", $dbClass);
             //单个数据库集
             //db obj
             $this->db = new $dbClass([
@@ -259,6 +262,7 @@ class Model extends Straw implements Db{
                                          'prefix'  => self::$dbArr[$this->dbTag]['DB_PREFIX'] ?? ''
                                      ]);
         }
+        \Strawframework\Base\Log::getInstance()->debug("SET TABLE", $this->table);
         //选择待操作表
         $this->db->setTable($this->table);
     }
@@ -375,9 +379,10 @@ class Model extends Straw implements Db{
         $this->_setCanEmpty(['options' => []]);
 
         $result = $this->db->insert($data, $this->_modelData['options']);
+
+        \Strawframework\Base\Log::getInstance()->debug("INSERT", $data, $this->_modelData, 'LAST SQL', $this->getLastSql(), 'RESULT', $result);
         //取到数据 清空条件
         $this->_modelData = [];
-
         return $result;
     }
 
@@ -401,9 +406,9 @@ class Model extends Straw implements Db{
             //有缓存 数据优先使用
             $cacheRes = json_decode(Cache::get($this->_modelData['cacheKey']), TRUE);
             if ($cacheRes) {
+                \Strawframework\Base\Log::getInstance()->debug("GET ONE FROM CACHE",$this->_modelData, 'LAST SQL', $this->getLastSql(), 'RESULT', $cacheRes);
                 //取到数据 清空条件
                 $this->_modelData = [];
-
                 return $cacheRes;
             }
         }
@@ -414,6 +419,7 @@ class Model extends Straw implements Db{
             Cache::set($this->_modelData['cacheKey'], json_encode($result), $this->_modelData['exp']);
         }
 
+        \Strawframework\Base\Log::getInstance()->debug("GET ONE", $this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $result);
         //取到数据 清空条件
         $this->_modelData = [];
 
@@ -437,6 +443,8 @@ class Model extends Straw implements Db{
             //有缓存 数据优先使用
             $cacheRes = json_decode(Cache::get($this->_modelData['cacheKey']), TRUE);
             if ($cacheRes) {
+                \Strawframework\Base\Log::getInstance()->debug("GET ALL FROM CACHE", $this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $cacheRes);
+
                 //取到数据 清空条件
                 $this->_modelData = [];
 
@@ -450,6 +458,7 @@ class Model extends Straw implements Db{
             Cache::set($this->_modelData['cacheKey'], json_encode($result), $this->_modelData['exp']);
         }
 
+        \Strawframework\Base\Log::getInstance()->debug("GET ALL", $this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $result);
         //取到数据 清空条件
         $this->_modelData = [];
 
@@ -476,9 +485,10 @@ class Model extends Straw implements Db{
             //有缓存 数据优先使用
             $cacheRes = json_decode(Cache::get($this->_modelData['cacheKey']), TRUE);
             if ($cacheRes) {
+                \Strawframework\Base\Log::getInstance()->debug("GET COUNT FROM CACHE", $this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $cacheRes);
+
                 //取到数据 清空条件
                 $this->_modelData = [];
-
                 return $cacheRes;
             }
         }
@@ -489,6 +499,7 @@ class Model extends Straw implements Db{
             Cache::set($this->_modelData['cacheKey'], json_encode($result), $this->_modelData['exp']);
         }
 
+        \Strawframework\Base\Log::getInstance()->debug("GET COUNT", $this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $result);
         //取到数据 清空条件
         $this->_modelData = [];
 
@@ -513,10 +524,13 @@ class Model extends Straw implements Db{
 
         //有缓存 要删除
         if ($cacheKey) {
+            \Strawframework\Base\Log::getInstance()->debug("DELETE CACHE", $cacheKey);
             Cache::del($cacheKey);
         }
 
         $result = $this->db->update($setData, $criteria, $this->_modelData['data'], $this->_modelData['options']);
+
+        \Strawframework\Base\Log::getInstance()->debug("UPDATE", $setData,  'CRITERIA', $criteria, $this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $result);
         //清空
         $this->_modelData = [];
 
@@ -537,10 +551,15 @@ class Model extends Straw implements Db{
         $this->_setCanEmpty(['data' => [], 'options' => []]);
         //有缓存 要删除
         if ($cacheKey) {
+            \Strawframework\Base\Log::getInstance()->debug("DELETE CACHE", $cacheKey);
+
             Cache::del($cacheKey);
         }
 
         $result = $this->db->delete($criteria, $this->_modelData['data'], $this->_modelData['options']);
+
+        \Strawframework\Base\Log::getInstance()->debug("DELETE", 'CRITERIA', $criteria, $this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $result);
+
         //清空
         $this->_modelData = [];
 
@@ -571,6 +590,8 @@ class Model extends Straw implements Db{
             //有缓存 数据优先使用
             $cacheRes = json_decode(Cache::get($cacheKey), TRUE);
             if ($cacheRes) {
+                \Strawframework\Base\Log::getInstance()->debug("GET QUERY FROM CACHE",$this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $cacheRes);
+
                 return $cacheRes;
             }
         }
@@ -580,7 +601,7 @@ class Model extends Straw implements Db{
         if ($cacheKey) {
             Cache::set($cacheKey, json_encode($result), $this->_modelData['exp']);
         }
-
+        \Strawframework\Base\Log::getInstance()->debug("GET QUERY",$this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $result);
         return $result;
     }
 
@@ -592,7 +613,7 @@ class Model extends Straw implements Db{
      * @return mixed
      */
     protected function getAllField($table = '') {
-
+        $this->_getConnect('read');
         if (!$table) {
             $table = $this->table;
         }
@@ -603,6 +624,7 @@ class Model extends Straw implements Db{
         //有缓存 数据优先使用
         $cacheRes = json_decode(Cache::get($cacheKey), TRUE);
         if ($cacheRes) {
+            \Strawframework\Base\Log::getInstance()->debug("GET ALL FIELD FROM CACHE",$this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $cacheRes);
             return $cacheRes;
         }
 
@@ -613,7 +635,7 @@ class Model extends Straw implements Db{
         if (FALSE == APP_DEBUG) {
             Cache::set($cacheKey, json_encode($result), 60 * 60 * 24);
         }
-
+        \Strawframework\Base\Log::getInstance()->debug("GET ALL FIELD",$this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $result);
         return $result;
     }
 

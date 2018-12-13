@@ -83,6 +83,7 @@ class Straw {
      * @throws \Exception
      */
     public function run(): void {
+        \Strawframework\Base\Log::getInstance()->debug('Run on APP_ENV', $_ENV['APP_ENV'], 'APP_DEBUG = ' . APP_DEBUG);
         $rMethod = strtolower($_SERVER['REQUEST_METHOD']);
         if (!in_array($rMethod, self::AVAILABLE_METHODS))
             throw new \Exception(sprintf("%s method not invalid.", $rMethod));
@@ -139,6 +140,7 @@ class Straw {
             }
         }
 
+        \Strawframework\Base\Log::getInstance()->debug('ALL REQUEST DOCS', $requestDocs);
         //如果取不到值 加 / 兼容 list /list
         if (!$requestDocs[$a][$rMethod]){
             $a = '/' . $a;

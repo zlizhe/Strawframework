@@ -47,6 +47,7 @@ class RequestFactory{
             }
         }
 
+        \Strawframework\Base\Log::getInstance()->debug("RO DOCS", $requestDocs);
         return (new $class())->setRequired($required)->setRequests($fromMethod, $requestDocs);
     }
 

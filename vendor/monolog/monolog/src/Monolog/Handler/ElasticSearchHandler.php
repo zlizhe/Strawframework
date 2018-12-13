@@ -142,6 +142,7 @@ class ElasticsearchHandler extends AbstractProcessingHandler
                 ];
                 unset($record['_index'], $record['_type']);
 
+                $record['context'] = json_encode($record['context']);
                 $params['body'][] = $record;
             }
 

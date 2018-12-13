@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 /*
  * This file is part of the Monolog package.
@@ -12,6 +12,7 @@
 namespace Monolog\Handler;
 
 use Monolog\Logger;
+use Monolog\Formatter\FormatterInterface;
 use Monolog\Formatter\LogglyFormatter;
 
 /**
@@ -23,18 +24,25 @@ use Monolog\Formatter\LogglyFormatter;
  */
 class LogglyHandler extends AbstractProcessingHandler
 {
-    const HOST = 'logs-01.loggly.com';
-    const ENDPOINT_SINGLE = 'inputs';
-    const ENDPOINT_BATCH = 'bulk';
+    protected const HOST = 'logs-01.loggly.com';
+    protected const ENDPOINT_SINGLE = 'inputs';
+    protected const ENDPOINT_BATCH = 'bulk';
 
     protected $token;
 
-    protected $tag = array();
+    protected $tag = [];
 
-    public function __construct($token, $level = Logger::DEBUG, $bubble = true)
+    /**
+     * @param string     $token  API token supplied by Loggly
+     * @param string|int $level  The minimum logging level to trigger this handler
+     * @param bool       $bubble Whether or not messages that are handled should bubble up the stack.
+     *
+     * @throws MissingExtensionException If the curl extension is missing
+     */
+    public function __construct(string $token, $level = Logger::DEBUG, bool $bubble = true)
     {
         if (!extension_loaded('curl')) {
-            throw new \LogicException('The curl extension is needed to use the LogglyHandler');
+            throw new MissingExtensionException('The curl extension is needed to use the LogglyHandler');
         }
 
         $this->token = $token;
@@ -42,26 +50,36 @@ class LogglyHandler extends AbstractProcessingHandler
         parent::__construct($level, $bubble);
     }
 
-    public function setTag($tag)
+    /**
+     * @param string[]|string $tag
+     */
+    public function setTag($tag): self
     {
-        $tag = !empty($tag) ? $tag : array();
-        $this->tag = is_array($tag) ? $tag : array($tag);
+        $tag = !empty($tag) ? $tag : [];
+        $this->tag = is_array($tag) ? $tag : [$tag];
+
+        return $this;
     }
 
-    public function addTag($tag)
+    /**
+     * @param string[]|string $tag
+     */
+    public function addTag($tag): self
     {
         if (!empty($tag)) {
-            $tag = is_array($tag) ? $tag : array($tag);
+            $tag = is_array($tag) ? $tag : [$tag];
             $this->tag = array_unique(array_merge($this->tag, $tag));
         }
+
+        return $this;
     }
 
-    protected function write(array $record)
+    protected function write(array $record): void
     {
-        $this->send($record["formatted"], self::ENDPOINT_SINGLE);
+        $this->send($record["formatted"], static::ENDPOINT_SINGLE);
     }
 
-    public function handleBatch(array $records)
+    public function handleBatch(array $records): void
     {
         $level = $this->level;
 
@@ -70,15 +88,15 @@ class LogglyHandler extends AbstractProcessingHandler
         });
 
         if ($records) {
-            $this->send($this->getFormatter()->formatBatch($records), self::ENDPOINT_BATCH);
+            $this->send($this->getFormatter()->formatBatch($records), static::ENDPOINT_BATCH);
         }
     }
 
-    protected function send($data, $endpoint)
+    protected function send(string $data, string $endpoint): void
     {
-        $url = sprintf("https://%s/%s/%s/", self::HOST, $endpoint, $this->token);
+        $url = sprintf("https://%s/%s/%s/", static::HOST, $endpoint, $this->token);
 
-        $headers = array('Content-Type: application/json');
+        $headers = ['Content-Type: application/json'];
 
         if (!empty($this->tag)) {
             $headers[] = 'X-LOGGLY-TAG: '.implode(',', $this->tag);
@@ -95,7 +113,7 @@ class LogglyHandler extends AbstractProcessingHandler
         Curl\Util::execute($ch);
     }
 
-    protected function getDefaultFormatter()
+    protected function getDefaultFormatter(): FormatterInterface
     {
         return new LogglyFormatter();
     }

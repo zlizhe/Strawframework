@@ -107,6 +107,7 @@ final class Main{
         set_error_handler(function($errno, $errstr, $errfile, $errline){
             //Fatal error
             if (E_ERROR == $errno){
+                \Strawframework\Base\Log::getInstance()->setType('mongodb')->error('SERVER ERROR', $errno, $errstr, $errfile, $errline);
                 return new Result(Code::SERVER_ERROR, $errstr, [
                     '_error_level' => 'Server Error!',
                     '_error_file' => $errfile . '; Line: ' . $errline
@@ -115,6 +116,7 @@ final class Main{
 
             //warning
             if (E_WARNING == $errno){
+                \Strawframework\Base\Log::getInstance()->setType('mongodb')->warning('SERVER WARNING', $errno, $errstr, $errfile, $errline);
                 return new Result(Code::SERVER_ERROR, $errstr, [
                     '_error_level' => 'Server Warning!',
                     '_error_file' => $errfile . '; Line: ' . $errline
@@ -136,6 +138,8 @@ final class Main{
                 $res['_debug_throw'] = $exception->getFile() . '; Line:' . $exception->getLine();
                 $res['_debug_trace'] = $exception->getTrace();
             }
+
+            \Strawframework\Base\Log::getInstance()->debug('USER EXCEPTION', $exception->getMessage(), $res);
             return new Result(Code::FAIL, $exception->getMessage(), $res);
         });
 

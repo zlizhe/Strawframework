@@ -2,7 +2,6 @@
 namespace Strawframework\Base;
 
 use MongoDB\Client;
-use Monolog\Formatter\ElasticsearchFormatter;
 use Monolog\Formatter\MongoDBFormatter;
 use Monolog\Handler\ElasticSearchHandler;
 use Monolog\Handler\MongoDBHandler;
@@ -110,7 +109,7 @@ class Log{
      * @return bool
      * @throws \Exception
      */
-    private function set($msg, ...$context){
+    protected function set($msg, ...$context){
         //$logger = self::$container->{md5(__CLASS__)};
         //if (!$logger){
         //    $logger = new Logger(Straw::$config['site_name']);
@@ -118,7 +117,7 @@ class Log{
         //}
 
         if (!$this->type)
-            $this->type[] = strtoupper(Straw::$config['log']);
+            $this->type[] = Straw::$config['log'];
 
         //if (!$this->type)
         //    throw new \Exception('Default log type must be set.');
@@ -134,9 +133,15 @@ class Log{
             throw new \Exception(sprintf('Log level %s can not support.', $this->level));
 
         //总是包含的必要信息
-        array_unshift($context, sprintf('%s /%s/%s/%s', $_SERVER['REQUEST_METHOD'], VERSION_NAME ?? null, CONTROLLER_NAME ?? null, ACTION_NAME ?? null));
+        array_unshift($context, sprintf('%s /%s/%s/%s', $_SERVER['REQUEST_METHOD'], defined('VERSION_NAME') ? VERSION_NAME : null, defined('CONTROLLER_NAME') ? CONTROLLER_NAME : null, defined('ACTION_NAME') ? ACTION_NAME : null));
 
-        return call_user_func_array([$this->logger, $this->level], [$msg, $context]);
+        call_user_func_array([$this->logger, $this->level], [$msg, $context]);
+        //用完去除
+        foreach ($this->type as $item) {
+            $this->logger->popHandler();
+        }
+        unset($this->type);
+        return true;
     }
 
     /**
@@ -149,8 +154,11 @@ class Log{
         foreach ($this->type as $type) {
             $config = Straw::$config['logs'][$type];
 
-            if (!$config)
-                throw new \Exception(sprintf('Log config %s can not found.', $config['type']));
+            //没有加载配置时 默认使用
+            if (!$config){
+                $config = Straw::$config['logs'][Straw::$config['log']]; //使用默认的配置
+                //throw new \Exception(sprintf('Log config %s can not found.', $config['type']));
+            }
 
             $methodName = 'getType' . ucfirst(strtolower($config['type']));
             if (!method_exists($this, $methodName))
@@ -176,7 +184,7 @@ class Log{
     private function getTypeFile($config, $formatter){
 
         $handler = new RotatingFileHandler($config['saveSrc'], $config['maxFiles'] ?? 30, True == APP_DEBUG ? Logger::DEBUG : Logger::INFO);
-        $handler->setFormatter(new $formatter());
+        $handler->setFormatter(new $formatter($formatter == '\Monolog\Formatter\LogstashFormatter' ? Straw::$config['site_name'] : null));
         $handler->setFilenameFormat('{date}' . $config['fileName'], $config['srcFormat']);
         return $handler;
     }
@@ -221,9 +229,12 @@ class Log{
     private function getTypeElastic($config, $formatter){
 
         $client = \Elasticsearch\ClientBuilder::create()->setHosts(is_array($config['host']) ? $config['host'] : [$config['host']])->build();
-        $handler = new ElasticSearchHandler($client, [], True == APP_DEBUG ? Logger::DEBUG : Logger::INFO);
-        $handler->setFormatter(new ElasticsearchFormatter());
-        //$handler->setFormatter(new ElasticaFormatter());
+
+        //$response = $client->indices()->create([
+        //    'index' => strtolower($config['index'])
+        //]);
+        $handler = new ElasticSearchHandler($client, ['index' => strtolower($config['index'])], True == APP_DEBUG ? Logger::DEBUG : Logger::INFO);
+        //$handler->setFormatter(new ElasticsearchFormatter(Straw::$config['site_name'] . '_log', '_doc'));
         return $handler;
     }
 }

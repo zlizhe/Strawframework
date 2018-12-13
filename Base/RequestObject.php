@@ -101,6 +101,7 @@ class RequestObject{
         }
         self::$call = $params;
 
+        \Strawframework\Base\Log::getInstance()->debug('REQUESTS PARAMS', $params);
         //测试环境提示参数问题
         if (true == APP_DEBUG){
             unset($_REQUEST);
@@ -191,9 +192,11 @@ class RequestObject{
 
         //不存在的转换直接返回本身
         if (!key_exists($type, $doConvert) /*&& $v instanceof \stdClass*/){
+            \Strawframework\Base\Log::getInstance()->debug("NOT_CONVERT", "original", $v, 'type', $type);
             return $v;
         }
 
+        \Strawframework\Base\Log::getInstance()->debug("CONVERT", "original", $v, 'type', $type);
         return $doConvert[$type]($v);
     }
 

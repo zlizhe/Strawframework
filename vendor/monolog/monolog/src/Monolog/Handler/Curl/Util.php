@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 /*
  * This file is part of the Monolog package.
@@ -13,7 +13,7 @@ namespace Monolog\Handler\Curl;
 
 class Util
 {
-    private static $retriableErrorCodes = array(
+    private static $retriableErrorCodes = [
         CURLE_COULDNT_RESOLVE_HOST,
         CURLE_COULDNT_CONNECT,
         CURLE_HTTP_NOT_FOUND,
@@ -21,7 +21,7 @@ class Util
         CURLE_OPERATION_TIMEOUTED,
         CURLE_HTTP_POST_ERROR,
         CURLE_SSL_CONNECT_ERROR,
-    );
+    ];
 
     /**
      * Executes a CURL request with optional retries and exception on failure
@@ -29,7 +29,7 @@ class Util
      * @param  resource          $ch curl handler
      * @throws \RuntimeException
      */
-    public static function execute($ch, $retries = 5, $closeAfterDone = true)
+    public static function execute($ch, int $retries = 5, bool $closeAfterDone = true): void
     {
         while ($retries--) {
             if (curl_exec($ch) === false) {
@@ -42,7 +42,7 @@ class Util
                         curl_close($ch);
                     }
 
-                    throw new \RuntimeException(sprintf('Curl error (code %s): %s', $curlErrno, $curlError));
+                    throw new \RuntimeException(sprintf('Curl error (code %d): %s', $curlErrno, $curlError));
                 }
 
                 continue;
