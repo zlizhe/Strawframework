@@ -16,12 +16,17 @@ class DataViewObject implements \JsonSerializable, Persistable {
         return ['trim'];
     }
 
+    //unset($name) 快速删除
+    public function __unset($name)
+    {
+        unset($this->$name);
+    }
+
     /**
      * @param $colName
      * @param $param
      *
      * @return mixed
-     * @throws \Exception
      */
     public function __call($colName, $param){
 
@@ -70,7 +75,6 @@ class DataViewObject implements \JsonSerializable, Persistable {
      *
      * @param string $scenes
      *
-     * @throws \Exception
      */
     public function __construct(? RequestObject $ro = null, $filedRelation = null, string $scenes = 'default') {
         $this->_scenes = $scenes;
@@ -105,7 +109,7 @@ class DataViewObject implements \JsonSerializable, Persistable {
             //方法的注释
             //@todo 缓存已知类到 Runtime
             $dvoDoc = $method->getDocComment();
-            preg_match('/@Column\s*\(name=[\'|\"](.*)[\'|\"]\s*,\s*type=[\'|\"](.*)[\'|\"]\)/i', $dvoDoc, $dvoColumn);
+            preg_match('/@Column\s*\(\s*name\s*=\s*[\'|\"](.*)[\'|\"]\s*,\s*type\s*=\s*[\'|\"](.*)[\'|\"]\s*\)/i', $dvoDoc, $dvoColumn);
 
             //参数 名称 / 类型
             list($clo, $name, $type) = $dvoColumn;
@@ -192,18 +196,22 @@ class DataViewObject implements \JsonSerializable, Persistable {
      */
     public function _setAlias($propName, $alias, $value): DataViewObject{
 
-        if (!property_exists($this, $propName))
-            throw new \Exception(sprintf("Alias's property %s not found.", $propName));
 
-        $backUp = $this->{lcfirst($propName)};
+        //没有传入原字段名 不走set
+        if (!$propName) {
+            $this->{'_' . $alias} = $value;
+        }else{
+            if (!property_exists($this, $propName))
+                throw new \Exception(sprintf("Alias's property %s not found.", $propName));
 
-        //写入原字段
-        $this->{'set' . ucfirst($propName)}($value);
-        //读原字段 写 alias 字段 _ 开头
-        $this->{'_' . $alias} = $this->{lcfirst($propName)};
-
-        //写回备份 至 原字段
-        $this->{lcfirst($propName)} = $backUp;
+            $backUp = $this->{lcfirst($propName)};
+            //写入原字段
+            $this->{'set' . ucfirst($propName)}($value);
+            //读原字段 写 alias 字段 _ 开头
+            $this->{'_' . $alias} = $this->{lcfirst($propName)};
+            //写回备份 至 原字段
+            $this->{lcfirst($propName)} = $backUp;
+        }
 
         return $this;
     }
@@ -218,22 +226,26 @@ class DataViewObject implements \JsonSerializable, Persistable {
      * @throws \Exception
      */
     public function _setArrayAlias($propName, $alias, array $value): DataViewObject{
-        if (!property_exists($this, $propName))
-            throw new \Exception(sprintf("Alias's property %s not found.", $propName));
+        if (!$propName){
+            $this->{'_' . $alias} = $value;
+        }else {
+            if (!property_exists($this, $propName))
+                throw new \Exception(sprintf("Alias's property %s not found.", $propName));
 
-        $backUp = $this->{lcfirst($propName)};
+            $backUp = $this->{lcfirst($propName)};
 
-        $aliasArr = [];
-        //传入的是数组 原 age = int 传入  [1,2,3,4]
-        foreach ($value as $v) {
-            //即使传入数组 每个 value 的类型也必须与 原值一样
-            $this->{'set' . ucfirst($propName)}($v);
-            $aliasArr[] = $this->{lcfirst($propName)};
+            $aliasArr = [];
+            //传入的是数组 原 age = int 传入  [1,2,3,4]
+            foreach ($value as $v) {
+                //即使传入数组 每个 value 的类型也必须与 原值一样
+                $this->{'set' . ucfirst($propName)}($v);
+                $aliasArr[] = $this->{lcfirst($propName)};
+            }
+            $this->{'_' . $alias} = $aliasArr;
+
+            //写回备份 至 原字段
+            $this->{lcfirst($propName)} = $backUp;
         }
-        $this->{'_' . $alias} = $aliasArr;
-
-        //写回备份 至 原字段
-        $this->{lcfirst($propName)} = $backUp;
 
         return $this;
     }

@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 /*
  * This file is part of the Monolog package.
@@ -25,29 +25,29 @@ use Monolog\Formatter\FormatterInterface;
  */
 class SlackRecord
 {
-    const COLOR_DANGER = 'danger';
+    public const COLOR_DANGER = 'danger';
 
-    const COLOR_WARNING = 'warning';
+    public const COLOR_WARNING = 'warning';
 
-    const COLOR_GOOD = 'good';
+    public const COLOR_GOOD = 'good';
 
-    const COLOR_DEFAULT = '#e3e4e6';
+    public const COLOR_DEFAULT = '#e3e4e6';
 
     /**
      * Slack channel (encoded ID or name)
-     * @var string|null
+     * @var ?string
      */
     private $channel;
 
     /**
      * Name of a bot
-     * @var string|null
+     * @var ?string
      */
     private $username;
 
     /**
      * User icon e.g. 'ghost', 'http://example.com/user.png'
-     * @var string
+     * @var string|null
      */
     private $userIcon;
 
@@ -85,11 +85,11 @@ class SlackRecord
      */
     private $normalizerFormatter;
 
-    public function __construct($channel = null, $username = null, $useAttachment = true, $userIcon = null, $useShortAttachment = false, $includeContextAndExtra = false, array $excludeFields = array(), FormatterInterface $formatter = null)
+    public function __construct(?string $channel = null, ?string $username = null, bool $useAttachment = true, ?string $userIcon = null, bool $useShortAttachment = false, bool $includeContextAndExtra = false, array $excludeFields = array(), FormatterInterface $formatter = null)
     {
         $this->channel = $channel;
         $this->username = $username;
-        $this->userIcon = trim($userIcon, ':');
+        $this->userIcon = $userIcon !== null ? trim($userIcon, ':') : null;
         $this->useAttachment = $useAttachment;
         $this->useShortAttachment = $useShortAttachment;
         $this->includeContextAndExtra = $includeContextAndExtra;
@@ -101,7 +101,7 @@ class SlackRecord
         }
     }
 
-    public function getSlackData(array $record)
+    public function getSlackData(array $record): array
     {
         $dataArray = array();
         $record = $this->excludeFields($record);
@@ -127,7 +127,7 @@ class SlackRecord
                 'color'     => $this->getAttachmentColor($record['level']),
                 'fields'    => array(),
                 'mrkdwn_in' => array('fields'),
-                'ts'        => $record['datetime']->getTimestamp()
+                'ts'        => $record['datetime']->getTimestamp(),
             );
 
             if ($this->useShortAttachment) {
@@ -136,7 +136,6 @@ class SlackRecord
                 $attachment['title'] = 'Message';
                 $attachment['fields'][] = $this->generateAttachmentField('Level', $record['level_name']);
             }
-
 
             if ($this->includeContextAndExtra) {
                 foreach (array('extra', 'context') as $key) {
@@ -178,32 +177,25 @@ class SlackRecord
     /**
      * Returned a Slack message attachment color associated with
      * provided level.
-     *
-     * @param  int    $level
-     * @return string
      */
-    public function getAttachmentColor($level)
+    public function getAttachmentColor(int $level): string
     {
         switch (true) {
             case $level >= Logger::ERROR:
-                return self::COLOR_DANGER;
+                return static::COLOR_DANGER;
             case $level >= Logger::WARNING:
-                return self::COLOR_WARNING;
+                return static::COLOR_WARNING;
             case $level >= Logger::INFO:
-                return self::COLOR_GOOD;
+                return static::COLOR_GOOD;
             default:
-                return self::COLOR_DEFAULT;
+                return static::COLOR_DEFAULT;
         }
     }
 
     /**
      * Stringifies an array of key/value pairs to be used in attachment fields
-     *
-     * @param array $fields
-     *
-     * @return string
      */
-    public function stringify($fields)
+    public function stringify(array $fields): string
     {
         $normalized = $this->normalizerFormatter->format($fields);
         $prettyPrintFlag = defined('JSON_PRETTY_PRINT') ? JSON_PRETTY_PRINT : 128;
@@ -212,29 +204,23 @@ class SlackRecord
         $hasNonNumericKeys = !count(array_filter(array_keys($normalized), 'is_numeric'));
 
         return $hasSecondDimension || $hasNonNumericKeys
-            ? json_encode($normalized, $prettyPrintFlag)
-            : json_encode($normalized);
+            ? json_encode($normalized, $prettyPrintFlag|JSON_UNESCAPED_UNICODE)
+            : json_encode($normalized, JSON_UNESCAPED_UNICODE);
     }
 
-    /**
-     * Sets the formatter
-     *
-     * @param FormatterInterface $formatter
-     */
-    public function setFormatter(FormatterInterface $formatter)
+    public function setFormatter(FormatterInterface $formatter): self
     {
         $this->formatter = $formatter;
+
+        return $this;
     }
 
     /**
      * Generates attachment field
      *
-     * @param string       $title
      * @param string|array $value
-     *
-     * @return array
      */
-    private function generateAttachmentField($title, $value)
+    private function generateAttachmentField(string $title, $value): array
     {
         $value = is_array($value)
             ? sprintf('```%s```', $this->stringify($value))
@@ -243,18 +229,14 @@ class SlackRecord
         return array(
             'title' => ucfirst($title),
             'value' => $value,
-            'short' => false
+            'short' => false,
         );
     }
 
     /**
      * Generates a collection of attachment fields from array
-     *
-     * @param array $data
-     *
-     * @return array
      */
-    private function generateAttachmentFields(array $data)
+    private function generateAttachmentFields(array $data): array
     {
         $fields = array();
         foreach ($this->normalizerFormatter->format($data) as $key => $value) {
@@ -266,12 +248,8 @@ class SlackRecord
 
     /**
      * Get a copy of record with fields excluded according to $this->excludeFields
-     *
-     * @param array $record
-     *
-     * @return array
      */
-    private function excludeFields(array $record)
+    private function excludeFields(array $record): array
     {
         foreach ($this->excludeFields as $field) {
             $keys = explode('.', $field);

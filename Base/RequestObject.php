@@ -1,6 +1,7 @@
 <?php
 namespace Strawframework\Base;
 
+use Doctrine\DBAL\Driver\PDOException;
 use MongoDB\BSON\ObjectID;
 use MongoDB\BSON\UTCDateTime;
 use Strawframework\Common\Code;
@@ -38,7 +39,7 @@ class RequestObject{
             $name = substr($reqName, 3);
             $propertyName = lcfirst($name);
             if (!property_exists($this, $propertyName)){
-                throw new \Exception(sprintf('Property not found %s', $name), Code::FAIL);
+                throw new \Exception(sprintf('Property %s not found in %s.', $name, get_called_class()), Code::FAIL);
             }else{
                 return $this->{$propertyName};
             }
@@ -99,7 +100,17 @@ class RequestObject{
                 throw new \Exception('Request method not invalid', Code::NOT_ALLOW);
         }
         self::$call = $params;
-        unset($_REQUEST);
+
+        \Strawframework\Base\Log::getInstance()->debug('REQUESTS PARAMS', $params);
+        //测试环境提示参数问题
+        if (true == APP_DEBUG){
+            unset($_REQUEST);
+
+            $diffParams = array_diff(array_keys($params), array_keys(get_object_vars($this)));
+            if (!empty($diffParams)){
+                throw new \Exception(sprintf('Params %s not in Ro. This message just show on APP_DEBUG.', implode(',', $diffParams)));
+            }
+        }
 
         foreach ($this as $key => $column) {
             $tmpValue = $params[$requests[$key]['name']];
@@ -142,7 +153,6 @@ class RequestObject{
      * @param string $type
      *
      * @return object
-     * @throws \Exception
      */
     public static function convert($v, string $type){
         $doConvert = [
@@ -182,9 +192,11 @@ class RequestObject{
 
         //不存在的转换直接返回本身
         if (!key_exists($type, $doConvert) /*&& $v instanceof \stdClass*/){
+            \Strawframework\Base\Log::getInstance()->debug("NOT_CONVERT", "original", $v, 'type', $type);
             return $v;
         }
 
+        \Strawframework\Base\Log::getInstance()->debug("CONVERT", "original", $v, 'type', $type);
         return $doConvert[$type]($v);
     }
 

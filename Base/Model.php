@@ -1,6 +1,7 @@
 <?php
 namespace Strawframework\Base;
 
+use Illuminate\Database\Query\Builder;
 use MongoDB\BSON\ObjectId;
 use MongoDB\BSON\UTCDateTime;
 use MongoDB\DeleteResult;
@@ -15,7 +16,90 @@ use Strawframework\Straw, Strawframework\Protocol\Db;
  * 模型基类
  * 初始化数据库配置
  * Class Model
- * @package library
+ * // MYSQL LIBRARY START
+ * @var Builder
+ * @method $this join($table, $first, $operator = null, $second = null, $type = 'inner', $where = false)
+ * @method $this distinct()
+ * @method $this addSelect($column)
+ * @method $this selectSub($query, $as)
+ * @method $this selectRaw($expression, array $bindings = [])
+ * @method $this fromSub($query, $as)
+ * @method $this fromRaw($expression, $bindings = [])
+ * @method $this joinWhere($table, $first, $operator, $second, $type = 'inner')
+ * @method $this joinSub($query, $as, $first, $operator = null, $second = null, $type = 'inner', $where = false)
+ * @method $this leftJoin($table, $first, $operator = null, $second = null)
+ * @method $this leftJoinWhere($table, $first, $operator, $second)
+ * @method $this leftJoinSub($query, $as, $first, $operator = null, $second = null)
+ * @method $this rightJoin($table, $first, $operator = null, $second = null)
+ * @method $this rightJoinWhere($table, $first, $operator, $second)
+ * @method $this rightJoinSub($query, $as, $first, $operator = null, $second = null)
+ * @method $this crossJoin($table, $first = null, $operator = null, $second = null)
+ * @method $this mergeWheres($wheres, $bindings)
+ * @method $this where($column, $operator = null, $value = null, $boolean = 'and')
+ * @method $this orWhere($column, $operator = null, $value = null)
+ * @method $this whereColumn($first, $operator = null, $second = null, $boolean = 'and')
+ * @method $this orWhereColumn($first, $operator = null, $second = null)
+ * @method $this whereRaw($sql, $bindings = [], $boolean = 'and')
+ * @method $this orWhereRaw($sql, $bindings = [])
+ * @method $this whereIn($column, $values, $boolean = 'and', $not = false)
+ * @method $this orWhereIn($column, $values)
+ * @method $this whereNotIn($column, $values, $boolean = 'and')
+ * @method $this orWhereNotIn($column, $values)
+ * @method $this whereIntegerInRaw($column, $values, $boolean = 'and', $not = false)
+ * @method $this whereIntegerNotInRaw($column, $values, $boolean = 'and')
+ * @method $this whereNull($column, $boolean = 'and', $not = false)
+ * @method $this orWhereNull($column)
+ * @method $this whereNotNull($column, $boolean = 'and')
+ * @method $this whereBetween($column, array $values, $boolean = 'and', $not = false)
+ * @method $this orWhereBetween($column, array $values)
+ * @method $this whereNotBetween($column, array $values, $boolean = 'and')
+ * @method $this orWhereNotBetween($column, array $values)
+ * @method $this orWhereNotNull($column)
+ * @method $this whereDate($column, $operator, $value = null, $boolean = 'and')
+ * @method $this orWhereDate($column, $operator, $value = null)
+ * @method $this whereTime($column, $operator, $value = null, $boolean = 'and')
+ * @method $this orWhereTime($column, $operator, $value = null)
+ * @method $this whereDay($column, $operator, $value = null, $boolean = 'and')
+ * @method $this orWhereDay($column, $operator, $value = null)
+ * @method $this whereMonth($column, $operator, $value = null, $boolean = 'and')
+ * @method $this orWhereMonth($column, $operator, $value = null)
+ * @method $this whereYear($column, $operator, $value = null, $boolean = 'and')
+ * @method $this orWhereYear($column, $operator, $value = null)
+ * @method $this whereNested(\Closure $callback, $boolean = 'and')
+ * @method $this forNestedWhere()
+ * @method $this whereExists(\Closure $callback, $boolean = 'and', $not = false)
+ * @method $this orWhereExists(\Closure $callback, $not = false)
+ * @method $this whereNotExists(\Closure $callback, $boolean = 'and')
+ * @method $this orWhereNotExists(\Closure $callback)
+ * @method $this addWhereExistsQuery(self $query, $boolean = 'and', $not = false)
+ * @method $this whereRowValues($columns, $operator, $values, $boolean = 'and')
+ * @method $this orWhereRowValues($columns, $operator, $values)
+ * @method $this whereJsonContains($column, $value, $boolean = 'and', $not = false)
+ * @method $this orWhereJsonContains($column, $value)
+ * @method $this whereJsonDoesntContain($column, $value, $boolean = 'and')
+ * @method $this orWhereJsonDoesntContain($column, $value)
+ * @method $this whereJsonLength($column, $operator, $value = null, $boolean = 'and')
+ * @method $this orWhereJsonLength($column, $operator, $value = null)
+ * @method $this dynamicWhere($method, $parameters)
+ * @method $this groupBy(...$groups)
+ * @method $this having($column, $operator = null, $value = null, $boolean = 'and')
+ * @method $this orHaving($column, $operator = null, $value = null)
+ * @method $this havingRaw($sql, array $bindings = [], $boolean = 'and')
+ * @method $this orHavingRaw($sql, array $bindings = [])
+ * @method $this latest($column = 'created_at')
+ * @method $this oldest($column = 'created_at')
+ * @method $this inRandomOrder($seed = '')
+ * @method $this forPage($page, $perPage = 15)
+ * @method $this forPageAfterId($perPage = 15, $lastId = 0, $column = 'id')
+ * @method $this union($query, $all = false)
+ * @method $this unionAll($query)
+ * @method $this lock($value = true)
+ * @method $this lockForUpdate()
+ * @method $this sharedLock()
+ * @method $this value($column)
+ * @method $this exists()
+ * // MYSQL LIBRARY END
+ * @return Model
  */
 class Model extends Straw implements Db{
 
@@ -40,35 +124,23 @@ class Model extends Straw implements Db{
     //当前配置 -> database
     protected static $dbArr = [];
 
-    ////设置 $_id 自动取一条数据
-    //protected $_value = NULL;
-    //
-    //// 设置更新的字段名称
-    //protected $_field = 'id';
-
-    ////快速更新值
-    //public function __set(string $name, string $value): bool {
-    //
-    //    if (!is_null($this->_value)) {
-    //        return $this->update([$name => $value], [$this->_field => $this->_value]) ? TRUE : FALSE;
-    //    }
-    //
-    //}
-    //
-    ////如果设置了 $_id 自动取 该数据值
-    //public function __get(string $name = '_ALL_') {
-    //
-    //    if (!is_null($this->_value)) {
-    //
-    //        $data = $this->query([$this->_field => $this->_value])->getOne();
-    //
-    //        if ($name == '_ALL_') {
-    //            return $data ?? null;
-    //        } else {
-    //            return $data[$name] ?? null;
-    //        }
-    //    }
-    //}
+    /**
+     * @param $name
+     * @param $arguments
+     * @return Model
+     */
+    public function __call($name, $arguments)
+    {
+        //其他方法默认读
+        if (!$arguments['_connectType']){
+            $this->_getConnect('read');
+        }else{
+            $this->_getConnect($arguments['_connectType']);
+        }
+        //通过 驱动类 db() 方法问题 扩展方法
+        $this->db->db($name, $arguments);
+        return $this;
+    }
 
 
     /**
@@ -124,6 +196,7 @@ class Model extends Straw implements Db{
         //驱动是否存在
         // db namespace
         $dbClass = '\\Strawframework\\Db\\' . $dbClass;
+
         if (FALSE === class_exists($dbClass))
             throw new \Exception(sprintf('Database driver %s not found.', $dbClass));
 
@@ -144,7 +217,8 @@ class Model extends Straw implements Db{
                     'username' => $userArray[$key] ?: $userArray[0],
                     'password' => $pwdArray[$key] ?: $pwdArray[0],
                     'dbname'   => $this->dbName,
-                    'charset'  => self::$dbArr[$this->dbTag]['DB_CHARSET']
+                    'charset'  => self::$dbArr[$this->dbTag]['DB_CHARSET'] ?? 'UTF8',
+                    'prefix'  => self::$dbArr[$this->dbTag]['DB_PREFIX'] ?? ''
                 ];
             }
             unset($portArray, $userArray, $pwdArray);
@@ -154,13 +228,16 @@ class Model extends Straw implements Db{
 
                 //第一台数据库为 写 其他为读
                 if ('write' == $type) {
+                    \Strawframework\Base\Log::getInstance()->debug("CONNECT TO WRITE DB", $dbClass, $this->dbArray[0]);
                     $this->db = new $dbClass($this->dbArray[0]);
                 } else {
+
                     $readArray = $this->dbArray;
                     //去除写数据库
                     unset($readArray[0]);
                     //打乱所有读数据库集
                     shuffle($readArray);
+                    \Strawframework\Base\Log::getInstance()->debug("CONNECT TO READ DB", $dbClass, $readArray[0]);
                     $this->db = new $dbClass($readArray[0]);
                 }
             } else {
@@ -172,7 +249,7 @@ class Model extends Straw implements Db{
 
 
         } else {
-
+            \Strawframework\Base\Log::getInstance()->debug("CONNECT TO DB", $dbClass);
             //单个数据库集
             //db obj
             $this->db = new $dbClass([
@@ -181,9 +258,11 @@ class Model extends Straw implements Db{
                                          'username' => self::$dbArr[$this->dbTag]['DB_USER'],
                                          'password' => self::$dbArr[$this->dbTag]['DB_PWD'],
                                          'dbname'   => $this->dbName,
-                                         'charset'  => self::$dbArr[$this->dbTag]['DB_CHARSET'],
+                                         'charset'  => self::$dbArr[$this->dbTag]['DB_CHARSET'] ?? 'UTF8',
+                                         'prefix'  => self::$dbArr[$this->dbTag]['DB_PREFIX'] ?? ''
                                      ]);
         }
+        \Strawframework\Base\Log::getInstance()->debug("SET TABLE", $this->table);
         //选择待操作表
         $this->db->setTable($this->table);
     }
@@ -193,6 +272,11 @@ class Model extends Straw implements Db{
     private $_modelData = [];
 
     // 连贯操作 where 语句查询
+    /**
+     * @param array $where
+     * @param $column, $operator = null, $value = null, $boolean = 'and')
+     * @return Model
+     */
     // * @param string|array|object $query  查询条件
     public function query($where = []): Model {
 
@@ -285,21 +369,20 @@ class Model extends Straw implements Db{
     }
 
     /**
-     * 写入新数据 $data
-     * @param array | object $data
-     * @param array $args
+     * 写入新数据 $data $dvo or [$dvo,$dvo2]
+     * @param array|object $data
      *
-     * @return InsertOneResult | InsertManyResult
-     * @throws \Exception
+     * @return bool|mixed|InsertManyResult|InsertOneResult
      */
     public function insert($data) {
         $this->_getConnect('write');
         $this->_setCanEmpty(['options' => []]);
 
         $result = $this->db->insert($data, $this->_modelData['options']);
+
+        \Strawframework\Base\Log::getInstance()->debug("INSERT", $data, $this->_modelData, 'LAST SQL', $this->getLastSql(), 'RESULT', $result);
         //取到数据 清空条件
         $this->_modelData = [];
-
         return $result;
     }
 
@@ -312,8 +395,8 @@ class Model extends Straw implements Db{
 
         $this->_setCanEmpty(['query' => [], 'data' => [], 'options' => [], 'field' => '', 'cacheKey' => '', 'exp' => DEFAULT_CACHEEXPIRE ?? null]);
 
-        if (!$this->_modelData['query'])
-            throw new \Exception('Query is empty.');
+        //if (!$this->_modelData['query'])
+        //    throw new \Exception('Query is empty.');
 
         //自动生成 cachekey
         if (TRUE === $this->_modelData['cacheKey']) {
@@ -323,9 +406,9 @@ class Model extends Straw implements Db{
             //有缓存 数据优先使用
             $cacheRes = json_decode(Cache::get($this->_modelData['cacheKey']), TRUE);
             if ($cacheRes) {
+                \Strawframework\Base\Log::getInstance()->debug("GET ONE FROM CACHE",$this->_modelData, 'LAST SQL', $this->getLastSql(), 'RESULT', $cacheRes);
                 //取到数据 清空条件
                 $this->_modelData = [];
-
                 return $cacheRes;
             }
         }
@@ -336,6 +419,7 @@ class Model extends Straw implements Db{
             Cache::set($this->_modelData['cacheKey'], json_encode($result), $this->_modelData['exp']);
         }
 
+        \Strawframework\Base\Log::getInstance()->debug("GET ONE", $this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $result);
         //取到数据 清空条件
         $this->_modelData = [];
 
@@ -359,6 +443,8 @@ class Model extends Straw implements Db{
             //有缓存 数据优先使用
             $cacheRes = json_decode(Cache::get($this->_modelData['cacheKey']), TRUE);
             if ($cacheRes) {
+                \Strawframework\Base\Log::getInstance()->debug("GET ALL FROM CACHE", $this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $cacheRes);
+
                 //取到数据 清空条件
                 $this->_modelData = [];
 
@@ -372,6 +458,7 @@ class Model extends Straw implements Db{
             Cache::set($this->_modelData['cacheKey'], json_encode($result), $this->_modelData['exp']);
         }
 
+        \Strawframework\Base\Log::getInstance()->debug("GET ALL", $this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $result);
         //取到数据 清空条件
         $this->_modelData = [];
 
@@ -398,9 +485,10 @@ class Model extends Straw implements Db{
             //有缓存 数据优先使用
             $cacheRes = json_decode(Cache::get($this->_modelData['cacheKey']), TRUE);
             if ($cacheRes) {
+                \Strawframework\Base\Log::getInstance()->debug("GET COUNT FROM CACHE", $this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $cacheRes);
+
                 //取到数据 清空条件
                 $this->_modelData = [];
-
                 return $cacheRes;
             }
         }
@@ -411,6 +499,7 @@ class Model extends Straw implements Db{
             Cache::set($this->_modelData['cacheKey'], json_encode($result), $this->_modelData['exp']);
         }
 
+        \Strawframework\Base\Log::getInstance()->debug("GET COUNT", $this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $result);
         //取到数据 清空条件
         $this->_modelData = [];
 
@@ -435,10 +524,13 @@ class Model extends Straw implements Db{
 
         //有缓存 要删除
         if ($cacheKey) {
+            \Strawframework\Base\Log::getInstance()->debug("DELETE CACHE", $cacheKey);
             Cache::del($cacheKey);
         }
 
         $result = $this->db->update($setData, $criteria, $this->_modelData['data'], $this->_modelData['options']);
+
+        \Strawframework\Base\Log::getInstance()->debug("UPDATE", $setData,  'CRITERIA', $criteria, $this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $result);
         //清空
         $this->_modelData = [];
 
@@ -459,10 +551,15 @@ class Model extends Straw implements Db{
         $this->_setCanEmpty(['data' => [], 'options' => []]);
         //有缓存 要删除
         if ($cacheKey) {
+            \Strawframework\Base\Log::getInstance()->debug("DELETE CACHE", $cacheKey);
+
             Cache::del($cacheKey);
         }
 
         $result = $this->db->delete($criteria, $this->_modelData['data'], $this->_modelData['options']);
+
+        \Strawframework\Base\Log::getInstance()->debug("DELETE", 'CRITERIA', $criteria, $this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $result);
+
         //清空
         $this->_modelData = [];
 
@@ -493,6 +590,8 @@ class Model extends Straw implements Db{
             //有缓存 数据优先使用
             $cacheRes = json_decode(Cache::get($cacheKey), TRUE);
             if ($cacheRes) {
+                \Strawframework\Base\Log::getInstance()->debug("GET QUERY FROM CACHE",$this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $cacheRes);
+
                 return $cacheRes;
             }
         }
@@ -502,7 +601,7 @@ class Model extends Straw implements Db{
         if ($cacheKey) {
             Cache::set($cacheKey, json_encode($result), $this->_modelData['exp']);
         }
-
+        \Strawframework\Base\Log::getInstance()->debug("GET QUERY",$this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $result);
         return $result;
     }
 
@@ -514,7 +613,7 @@ class Model extends Straw implements Db{
      * @return mixed
      */
     protected function getAllField($table = '') {
-
+        $this->_getConnect('read');
         if (!$table) {
             $table = $this->table;
         }
@@ -525,6 +624,7 @@ class Model extends Straw implements Db{
         //有缓存 数据优先使用
         $cacheRes = json_decode(Cache::get($cacheKey), TRUE);
         if ($cacheRes) {
+            \Strawframework\Base\Log::getInstance()->debug("GET ALL FIELD FROM CACHE",$this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $cacheRes);
             return $cacheRes;
         }
 
@@ -535,7 +635,7 @@ class Model extends Straw implements Db{
         if (FALSE == APP_DEBUG) {
             Cache::set($cacheKey, json_encode($result), 60 * 60 * 24);
         }
-
+        \Strawframework\Base\Log::getInstance()->debug("GET ALL FIELD",$this->_modelData, 'LAST SQL', $this->getLastSql(), "RESULT", $result);
         return $result;
     }
 

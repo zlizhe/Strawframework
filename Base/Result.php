@@ -45,7 +45,7 @@ class Result implements \Strawframework\Protocol\Result {
 
         Straw::$config['output_type'] = strtolower(Straw::$config['output_type']);
         if (!in_array(Straw::$config['output_type'], self::CONTENT_TYPES))
-            die(sprintf("Output type %s invalid.", Straw::$config['output_type']));
+            die(sprintf("Output type %s invalid. [Result]", Straw::$config['output_type']));
 
         http_response_code($code); //send http code
 

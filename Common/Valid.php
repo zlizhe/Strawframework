@@ -77,4 +77,25 @@ class Valid {
 
         return $defaultDomain ?: null;
     }
+
+    /**
+     * 验证 header -> $column 是否合法
+     * @param string $column 需要从 header 中获取的名称
+     * @param callable $callback 执行验证方法
+     *
+     * example
+     * Valid::header('token', function($token) use ($uid){
+     *  if (false == $this->getService('Member')->validToken($token, $uid))
+     *      throw new \Error\User('LOGIN_ERROR');
+     * });
+     * @return bool
+     */
+    public static function header(string $column, callable $callback){
+        $str = $_SERVER[sprintf('HTTP_%s', strtoupper($column))];
+
+        if (empty($str))
+            return false;
+
+        return call_user_func($callback, $str);
+    }
 }

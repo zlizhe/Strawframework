@@ -4,7 +4,7 @@ namespace Strawframework\Db;
 use \PDO;
 use Strawframework\Protocol\Db;
 
-class Mysql implements Db {
+class MysqlPDO implements Db {
 
     //pdo obj
     private $pdo;
@@ -22,7 +22,7 @@ class Mysql implements Db {
             $this->pdo = new PDO($dsn, $config['username'], $config['password']);
             $this->pdo->exec('SET CHARACTER SET ' . $config['charset']);
         } catch (\Exception $e) {
-            ex($e->getMessage(), $e->getTraceAsString(), 'DB CONNECT ERROR!');
+            throw new \Exception(sprintf("Db connect error: %s, %s", $e->getMessage(), $e->getTraceAsString()));
         }
     }
 
@@ -141,11 +141,15 @@ class Mysql implements Db {
             $table = $this->table;
         }
 
-        return '*';
-        $field = array_column($this->doQuery(sprintf('SHOW COLUMNS FROM `%s`', addslashes($table))), 'Field');
-//        $field = array_column($this->doQuery('SHOW COLUMNS FROM `'. $table .'`'), 'Field');
-        $field = '`' . implode('`, `', $field) . '`';
-        return $field;
+        try{
+            $field = array_column($this->doQuery(sprintf('SHOW COLUMNS FROM `%s`', addslashes($table))), 'Field');
+    //        $field = array_column($this->doQuery('SHOW COLUMNS FROM `'. $table .'`'), 'Field');
+            $field = '`' . implode('`, `', $field) . '`';
+        }catch (\PDOException $e){
+            $field = '*';
+        }finally{
+            return $field;
+        }
     }
 
     //获取行数
@@ -223,7 +227,7 @@ class Mysql implements Db {
      * @param string $ftype
      * @param int    $type
      */
-    public function getQuery($sql, $data = [], $type = PDO::FETCH_ASSOC) {
+    public function getQuery($sql = '', $data = [], $type = PDO::FETCH_ASSOC) {
         return $this->doQuery($sql, $data, 'all', $type);
     }
 
@@ -266,7 +270,7 @@ class Mysql implements Db {
              */
             return $result ?: false;
         } catch (\Exception $e) {
-            ex($e->getMessage(), $e->getTraceAsString(), 'Db Error');
+            throw new \Exception(sprintf("Do query error: %s, %s", $e->getMessage(), $e->getTraceAsString()));
         }
     }
 
@@ -310,11 +314,11 @@ class Mysql implements Db {
      */
     public function insert($data, $args = []) {
         if (!$this->table) {
-            ex('table not found');
+            throw new \Exception("Please set table first.");
         }
 
         if (!$data || !is_array($data)){
-            ex('Insert data must be an array');
+            throw new \Exception("Insert data must be an array.");
         }
 
         $colName = [];
@@ -333,7 +337,7 @@ class Mysql implements Db {
             }
             return $this->getLastId();
         } catch (\Exception $e) {
-            ex("Mysql Insert Error: ", $e->getMessage() . PHP_EOL . $e->getTraceAsString(), 'DB ERROR');
+            throw new \Exception(sprintf("Mysql insert error: %s, %s", $e->getMessage(), $e->getTraceAsString()));
         }
     }
 
@@ -356,15 +360,15 @@ class Mysql implements Db {
     public function update($data, $condition, $args=[]) {
 
         if (!$this->table) {
-            ex('table not found');
+            throw new \Exception('Please set table first.');
         }
 
         if (!$data)
-            ex('Update data can not empty !');
+            throw new \Exception('Update data can not be empty.');
 
         //防止更新全部数据
         if (!$condition) {
-            ex('Update conditions can not empty !');
+            throw new \Exception('Update conditions can not empty.');
         }
 
         if (is_array($data)){
@@ -403,7 +407,7 @@ class Mysql implements Db {
             }
             return true;
         } catch (\Exception $e) {
-            ex("Mysql Update Error: ", $e->getMessage() . PHP_EOL . $e->getTraceAsString(), 'Db Error');
+            throw new \Exception(sprintf("Mysql update error: %s, %s", $e->getMessage(), $e->getTraceAsString()));
         }
     }
 
@@ -412,11 +416,11 @@ class Mysql implements Db {
      */
     public function delete($condition) {
         if (!$this->table) {
-            ex("Table not found !");
+            throw new \Exception('Please set table first.');
         }
 
         if (!$condition) {
-            ex('Delete Conditions can not empty!');
+            throw new \Exception('Delete conditions can not be empty.');
         }
 
         if (is_array($condition)) {
@@ -445,7 +449,7 @@ class Mysql implements Db {
             }
             return true;
         } catch (\Exception $e) {
-            ex('Mysql Delete Error', $e->getMessage() . PHP_EOL . $e->getTraceAsString(), 'Db Error');
+            throw new \Exception(sprintf("Mysql delete error: %s, %s", $e->getMessage(), $e->getTraceAsString()));
         }
     }
 
