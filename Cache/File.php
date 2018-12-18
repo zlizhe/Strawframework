@@ -14,7 +14,7 @@ use Strawframework\Base\Error;
 class File
 {
     //默认配置信息
-    private static $defaultConfig = [
+    const defaultConfig = [
         'CACHE_PATH' => ROOT_PATH.'/Runtime/Cache/File/', // 文件缓存默认目录
         'CACHE_PREFIX' => 'straw_', //文件名前缀
         'CACHE_EXPIRE' => 0 //过期时间(秒) 0为永久存在
@@ -38,9 +38,9 @@ class File
             return new Error('File cache config error!');
 
         //初始化配置
-        self::initConfig($config);
+        $this->initConfig($config);
         //初始化操作
-        self::init();
+        $this->init();
     }
 
     /**
@@ -69,7 +69,7 @@ class File
     {
         //初始化配置
         if (empty(self::$config)){
-            self::$config = array_merge(self::$defaultConfig,$config);
+            self::$config = array_merge(self::defaultConfig,$config);
             if (self::$config['CACHE_PATH'][strlen(self::$config['CACHE_PATH'])-1] != DS) {
                 self::$config['CACHE_PATH'] = self::$config['CACHE_PATH'].DS;
             }
@@ -88,7 +88,7 @@ class File
     public function set(string $key, $value, $expire = null)
     {
         $path = $this->getPathByKey($key);
-        return self::write($path,$value,$expire);
+        return $this->write($path,$value,$expire);
     }
 
     /**
@@ -112,7 +112,7 @@ class File
     public function del($key)
     {
         $path = $this->getPathByKey($key);
-        return self::unlink($path);
+        return $this->unlink($path);
     }
 
     /**
@@ -164,9 +164,9 @@ class File
 
         list($cache,$expire) = $this->read($path);
         if (is_numeric($cache)){
-            return self::write($path,$cache + $increase,$expire);
+            return $this->write($path,$cache + $increase,$expire);
         } else {
-            return self::write($path,$increase,$expire);
+            return $this->write($path,$increase,$expire);
         }
     }
 
@@ -196,9 +196,9 @@ class File
 
         list($cache,$expire) = $this->read($path);
         if (is_numeric($cache)){
-            return self::write($path,$cache - $decrease,$expire);
+            return $this->write($path,$cache - $decrease,$expire);
         } else {
-            return self::write($path,0 - $decrease,$expire);
+            return $this->write($path,0 - $decrease,$expire);
         }
     }
 
@@ -232,7 +232,7 @@ class File
 
         //立即过期
         if ($ttl == -1) {
-            return self::unlink($path);
+            return $this->unlink($path);
         } else {
             $cache = $this->read($path);
             return $this->write($path,$cache[self::$dataKey],$ttl);
@@ -277,7 +277,7 @@ class File
 
         $cache = $this->unserialize(file_get_contents($path));
         if ($cache[self::$expireKey] > 0 && time() > $cache[self::$expireKey]) {
-            self::unlink($path);
+            $this->unlink($path);
             return null;
         } else {
             return $cache;
@@ -338,7 +338,7 @@ class File
      * @param $path
      * @return bool
      */
-    private static function unlink($path)
+    private function unlink($path)
     {
         return is_file($path) && unlink($path);
     }
