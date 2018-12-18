@@ -1,17 +1,11 @@
 <?php
 namespace Strawframework\Db;
 
-use function MongoDB\BSON\fromPHP;
 use MongoDB\BSON\ObjectId;
-use MongoDB\BSON\Persistable;
 use MongoDB\BSON\Regex;
-use function MongoDB\BSON\toJSON;
-use MongoDB\Collection;
 use MongoDB\DeleteResult;
-use MongoDB\Driver\Cursor;
 use MongoDB\InsertManyResult;
 use MongoDB\InsertOneResult;
-use MongoDB\Model\BSONDocument;
 use MongoDB\Operation\DeleteMany;
 use MongoDB\Operation\DeleteOne;
 use MongoDB\Operation\InsertMany;
@@ -20,6 +14,8 @@ use MongoDB\Operation\UpdateMany;
 use MongoDB\Operation\UpdateOne;
 use MongoDB\UpdateResult;
 use Strawframework\Base\DataViewObject;
+use Strawframework\Protocol\Db;
+use Strawframework\Straw;
 
 /**
  * mongodb php Library
@@ -27,7 +23,7 @@ use Strawframework\Base\DataViewObject;
  * http://php.net/mongodb
  */
 
-class Mongodb {
+class Mongodb extends Straw implements Db {
 
     //db obj
     private $db;
@@ -59,27 +55,35 @@ class Mongodb {
     public function __construct($config){
 
         if (!extension_loaded("mongodb"))
-            throw new \Exception('Mongodb extend not found.');
+            throw new \Exception('Mongodb extend mongodb not found.');
 
-        try {
-            //mongo connect link
-            if ($config['username']){
-                $mongoConnect = sprintf('mongodb://%s:%s@%s:%d', $config['username'], $config['password'], $config['host'], $config['port']);
-            }else{
-                $mongoConnect = sprintf('mongodb://%s:%d', $config['host'], $config['port']);
+        $mongoHandle = self::$container->{md5(__CLASS__ . json_encode($config))};
+
+        if (!$mongoHandle) {
+            try {
+                //mongo connect link
+                if ($config['username']) {
+                    $mongoConnect = sprintf('mongodb://%s:%s@%s:%d', $config['username'], $config['password'], $config['host'], $config['port']);
+                } else {
+                    $mongoConnect = sprintf('mongodb://%s:%d', $config['host'], $config['port']);
+                }
+                /**
+                 * http://php.net/manual/zh/mongodb-driver-manager.construct.php
+                 * uriOptions and driverOptions
+                 */
+                $mongoHandle = new \MongoDB\Client($mongoConnect);
+            } catch (\MongoConnectionException | \Exception $e) {
+                throw new \Exception(sprintf("Mongodb connect error : ", $e->getMessage()));
             }
-            /**
-             * http://php.net/manual/zh/mongodb-driver-manager.construct.php
-             * uriOptions and driverOptions
-             */
-            $this->connect = new \MongoDB\Client($mongoConnect);
-        } catch (\MongoConnectionException | \Exception $e) {
-            throw new \Exception(sprintf("Mongodb connect error : ", $e->getMessage()));
-        }
-        //连接 current db 
-        $this->db = $config['dbname'];
 
-        unset($mongoConnect, $config);
+            unset($mongoConnect);
+            self::$container->{md5(__CLASS__ . json_encode($config))} = $mongoHandle;
+        }
+
+        $this->connect = $mongoHandle;
+
+        //连接 current db
+        $this->db = $config['dbname'];
         //每次都重新选择表
         $this->collection = null;
         //清空当前 查询语句
@@ -139,9 +143,14 @@ class Mongodb {
                 $data[$key]['_id'] = new ObjectId();
             }
 
+            preg_match('/(\b_\w+)/', json_encode($data[$key]), $matches);
+
             //绑定 data
-            if (!empty($dataQuery))
+            if (!empty($dataQuery)){
                 $data[$key] = $this->bindQuery($dataQuery, $data[$key]);
+            }else if (!empty($matches)){
+                throw new \Exception(sprintf('Data %s with DVO Alias must bind from ->data method.', json_encode($data[$key])));
+            }
 
             //解析特殊字
             $data[$key] = $this->parseQuery($data[$key]);
@@ -369,7 +378,7 @@ class Mongodb {
             }
 
             /* @var UpdateMany | UpdateOne */
-            $res = $this->collection->{$updateType}($condition, $setData);
+            $res = $this->collection->{$updateType}($condition, $setData, $options);
 
             return $res;
         } catch (\Exception $e) {
@@ -422,49 +431,78 @@ class Mongodb {
         }
     }
 
-     /**
-     * 兼容 mysql sql 方法 mongo 同 getAll
-     * @param $query
-     * @param $type
+
+    /**
+     * 执行其他方法 若方法不存在允许调用 collection 下的方法，其他的方法不走此方法
+     * @param       $query
+     * @param array $data
+     * @param array $options
+     *
+     * @return mixed|void
+     * @throws \Exception
      */
-    public function getQuery($query, $data = '') {
-        return $this->getAll($query);
+    public function getQuery($query = [], $data = [], $options = []) {
+
+        if (!$this->collection) {
+            throw new \Exception('Please set table first.');
+        }
+
+        //不允许条件为空 防止全表删除
+        if (!$query) {
+            throw new \Exception('Query can not empty.');
+        }
+
+        if (!$options['method']) {
+            throw new \Exception('Mongodb must set method for options to run collection\'s method.');
+        }
+
+
+        try {
+            if (method_exists($this, $options['method'])) {
+                unset($options['method']);
+                $this->{$options['method']}($query, $data, $options);
+            } else {
+                unset($options['method']);
+                $this->collection->{$options['method']}($query, $options);
+            }
+        } catch (\Exception $e) {
+            throw new \Exception(sprintf("Mongodb getQuery error %s. - Last Query: %s", $e->getMessage(), $this->getLastSql()));
+        }
     }
 
     /**
-     *  聚合操作
-     * @param $query 条件
-     * @param $group 聚合字段
-     * @param $fun 聚合方法 sum avg min max push addToSet first last
+     * Mongodb 复杂查询
+     * @param array $query
+     * @param array $data
+     * @param array $options
+     *
+     * @return mixed
+     * @throws \Exception
      */
-    public function aggregate($query = [], $group, $fun = 'sum', $param = 1){
-
-        $pipeline = [];
-        if (!empty($query)){
-            $query = $this->parseQuery($query);
-
-            array_push($pipeline, ['$match' => $query]);
-        }
-        array_push($pipeline, ['$group' => ['_id' => '$'.$group.'', 'n' => ['$'.$fun.'' => $param == 1 ? 1 : '$'.$param.'']]]);
-
-        //记录查询语句
-        if (TRUE == APP_DEBUG){
-            $this->sqlQuery = $this->db.'.'.$this->collection . '.aggregate(';
-            $this->sqlQuery .= json_encode($pipeline);
-            $this->sqlQuery .= ')';
-        }
+    private function aggregate($query, $data = [], $options = []){
 
         try{
+            //必须含有 group
+            if (!key_exists('$group', $query)){
+                throw new \Exception('Can not find $group in query.');
+            }
 
-            $commands = [
-                'aggregate' => $this->collection,
-                'pipeline' => $pipeline
-            ];
-            $result = $this->connect->executeCommand($this->db, new \MongoDB\Driver\Command($commands))->toArray();
+            //match 数据执行绑定与过滤
+            if ($query['$match']){
+                $query['$match'] = $this->parseDVO($query['$match'], $data);
+            }
 
-            return $result[0]->result;
+            //记录查询语句
+            if (TRUE == APP_DEBUG){
+                $this->sqlQuery = $this->db.'.'.$this->collection . '.aggregate(';
+                $this->sqlQuery .= json_encode($query);
+                $this->sqlQuery .= ')';
+            }
+
+            $res = $this->collection->aggregate($query, $options);
+            return $res;
         } catch (\Exception $e){
-            ex("Mongodb Run Aggregate Error", sprintf("%s ".PHP_EOL.'Last Query : %s', $e->getMessage(), $this->getLastSql()), 'DB Error');
+            throw new \Exception(sprintf("Mongodb aggregate error %s. - Last Query: %s", $e->getMessage(), $this->getLastSql()));
         }
     }
 
@@ -506,7 +544,7 @@ class Mongodb {
 
             //field 语句记录
             if(!empty($options['projection']) && TRUE == APP_DEBUG) {
-                $this->sqlQuery  .=  $field ? ', '.json_encode(array_values($options)[0]) : ', {}';
+                $this->sqlQuery  .=  $field ? ', '.json_encode(array_values($options['projection'])) : ', {}';
             }
         }
 
@@ -622,14 +660,11 @@ class Mongodb {
         return $data;
     }
 
-
-
     /**
-     * 调试使用
+     * 获取所有表字段
+     * @throws \Exception
      */
-    //public function __debugInfo()
-    //{
-    //    return ['lastSql' => $this->getLastSql()];
-    //}
-
+    public function getAllField(){
+        throw new \Exception('Mongodb can not provide this method.');
+    }
 }

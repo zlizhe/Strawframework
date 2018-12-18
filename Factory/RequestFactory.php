@@ -36,7 +36,7 @@ class RequestFactory{
             //方法的注释
             //@todo 缓存已知类
             $requestDoc = $method->getDocComment();
-            preg_match('/@Column\s*\(name=[\'|\"](.*)[\'|\"]\s*,\s*type=[\'|\"]('.implode('|', RequestObject::AVAILABLE_TYPE).')[\'|\"]\)/i', $requestDoc, $requestRouter);
+            preg_match('/@Column\s*\(\s*name\s*=\s*[\'|\"](.*)[\'|\"]\s*,\s*type\s*=\s*[\'|\"]('.implode('|', RequestObject::AVAILABLE_TYPE).')[\'|\"]\s*\)/i', $requestDoc, $requestRouter);
 
             //参数 名称 / 类型
             list($req, $name, $type) = $requestRouter;
@@ -47,6 +47,7 @@ class RequestFactory{
             }
         }
 
+        \Strawframework\Base\Log::getInstance()->debug("RO DOCS", $requestDocs);
         return (new $class())->setRequired($required)->setRequests($fromMethod, $requestDocs);
     }
 

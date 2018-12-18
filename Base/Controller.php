@@ -22,46 +22,6 @@ class Controller extends Straw {
 
     public function __construct() {
         parent::__construct();
-        //
-        ////当前程序版本
-        //$this->_Gver = '';//
-        //
-        ////read from config
-        //$this->_availableModules = parent::$config['modules'];
-        //if (!$this->_availableModules) {
-        //    ex('API available can not set');
-        //}
-        //
-        ////配置
-        //$this->_Gset['site_domain'] = parent::$config['config']['site_domain'];
-        ////本 module name
-        //$this->_Gset['module_name'] = parent::$config['config']['module_name'];
-        //
-        //
-        ////是否加载模板
-        //if (TRUE == $isView) {
-        //    //实例化模板类
-        //    $this->view = new \Strawframework\Base\View();
-        //
-        //    $this->assign('availableModules', $this->_availableModules);
-        //
-        //    //站点设置
-        //    $this->assign("_Gset", $this->_Gset);
-        //    //程序版本
-        //    $this->assign('_Gver', $this->_Gver);
-        //}
-        //
-        //$this->_csrfToken = $this->_getCsrfToken();
-        //
-        ////验证 csrf_token
-        //if ($_REQUEST['_csrf_token'] && $_REQUEST['_csrf_token'] !== $this->_csrfToken) {
-        //    ex('Access Denied');
-        //}
-
-        //默认的证书
-        //if (parent::$config['config']['sign_key'] && parent::$config['config']['rsa_sign']){
-        //    define('SIGN_KEY', strtolower(parent::$config['config']['sign_key']));
-        //}
     }
 
     /**

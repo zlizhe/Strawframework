@@ -1,8 +1,11 @@
 {
     "require": {
-        "vlucas/phpdotenv": "^2.5",
         "mongodb/mongodb": "^1.4",
+        "monolog/monolog": "2.0.0-beta1",
+        "illuminate/database": "^5.7",
         "illuminate/events": "^5.7",
-        "monolog/monolog": "^1.24"
+        "doctrine/dbal": "^2.9",
+        "swiftmailer/swiftmailer": "^6.0",
+        "elasticsearch/elasticsearch": "~6.0"
     }
 }
