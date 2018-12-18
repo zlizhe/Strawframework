@@ -1,6 +1,8 @@
 <?php
 namespace Strawframework\Base;
 
+use Strawframework\Cache\File;
+use Strawframework\Cache\Redis;
 use Strawframework\Straw;
 
 /**
@@ -23,26 +25,21 @@ class Cache extends Straw {
 
     //读取 redis 配置
     private function _getConfig(): void {
-
         self::$cacheName = DEFAULT_CACHE;
-        self::$cacheArr = parent::$config['cache'][self::$cacheName];
+        self::$cacheArr = parent::$config['caches'][self::$cacheName];
     }
 
     //连接服务
     private function _getConnect(): void {
 
-        $cacheClass = "Cache\\" . self::$cacheArr['CACHE_TYPE'];
+        $cacheClass = "Strawframework\\Cache\\" . self::$cacheArr['CACHE_TYPE'];
 
         //驱动是否存在
         if (FALSE === class_exists($cacheClass)) {
             ex("Cache Driver " . $cacheClass . " Not Found\t");
         }
 
-        self::$cache = new $cacheClass([
-                                           'host' => self::$cacheArr['CACHE_HOST'],
-                                           'port' => self::$cacheArr['CACHE_PORT'],
-                                           'auth' => self::$cacheArr['CACHE_AUTH'],
-                                       ]);
+        self::$cache = new $cacheClass(self::$cacheArr);
     }
 
     //初始化 cache
@@ -65,7 +62,7 @@ class Cache extends Straw {
     /**
      * 设置缓存
      */
-    public static function set(string $key, string $value, int $expire = 0): object {
+    public static function set(string $key, $value, int $expire = 0) {
         if (is_null(self::$cache)) {
             new self();
         }
@@ -77,7 +74,7 @@ class Cache extends Straw {
     /**
      *  取缓存值
      */
-    public static function get(string $key): object {
+    public static function get(string $key) {
         if (is_null(self::$cache)) {
             new self();
         }
@@ -88,7 +85,7 @@ class Cache extends Straw {
     /**
      * 根据  key 删除  cache
      */
-    public static function del(string $key): object {
+    public static function del(string $key) {
 
         if (is_null(self::$cache)) {
             new self();
@@ -104,7 +101,7 @@ class Cache extends Straw {
      *
      * @return mixed
      */
-    public static function incr(string $key): object {
+    public static function incr(string $key) {
 
         if (is_null(self::$cache)) {
             new self();
@@ -121,7 +118,7 @@ class Cache extends Straw {
      *
      * @return mixed
      */
-    public static function incrByFloat(string $key, float $increment): object {
+    public static function incrByFloat(string $key, float $increment) {
         if (is_null(self::$cache)) {
             new self();
         }
@@ -137,7 +134,7 @@ class Cache extends Straw {
      *
      * @return mixed
      */
-    public static function incrBy(string $key, int $value): object {
+    public static function incrBy(string $key, int $value) {
         if (is_null(self::$cache)) {
             new self();
         }
@@ -152,7 +149,7 @@ class Cache extends Straw {
      *
      * @return mixed
      */
-    public static function decr(string $key): object {
+    public static function decr(string $key) {
         if (is_null(self::$cache)) {
             new self();
         }
@@ -169,11 +166,35 @@ class Cache extends Straw {
      *
      * @return mixed
      */
-    public static function decrBy(string $key, int $value): object {
+    public static function decrBy(string $key, int $value) {
         if (is_null(self::$cache)) {
             new self();
         }
 
         return self::$cache->decrBy(self::$pre . $key, $value);
+    }
+
+    /**
+     * 更新缓存过期时间
+     *
+     * @param string $key
+     * @param int $ttl
+     * @return mixed
+     */
+    public static function ttl(string $key ,int $ttl)
+    {
+        if (is_null(self::$cache)) {
+            new self();
+        }
+
+        return self::$cache->ttl(self::$pre . $key, $ttl);
+    }
+
+    /**
+     * @return \Strawframework\Cache\Redis|\Strawframework\Cache\File
+     */
+    public static function getInstance()
+    {
+        return self::$cache;
     }
 }
