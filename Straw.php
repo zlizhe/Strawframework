@@ -45,14 +45,14 @@ class Straw {
         //佛性加载器
         self::$config = @include ($configPath . 'config.php');
         if (false == self::$config)
-            throw new \Exception(sprintf('Config file config.php in env %s not loaded.', $_ENV['APP_ENV']));
+            die(sprintf('Config file config.php in env %s not loaded.', $_ENV['APP_ENV']));
 
-        //加载扩展配置
+        ////加载扩展配置
         if (!empty(self::$config['ext'])){
             foreach(self::$config['ext'] as $conf){
                 self::$config[$conf] = @include ($configPath . $conf. '.php');
                 if (false == self::$config[$conf])
-                    throw new \Exception(sprintf('Config file %s.php in env %s not loaded.', $conf, $_ENV['APP_ENV']));
+                    die(sprintf('Config file %s.php in env %s not loaded.', $conf, $_ENV['APP_ENV']));
             }
         }
 
