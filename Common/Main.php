@@ -25,7 +25,7 @@ final class Main{
         $_ENV['APP_ENV'] = getenv('APP_ENV');
 
         //有值则设定，否则生产环境
-        if (!isset($_ENV['APP_ENV']))
+        if (!($_ENV['APP_ENV']))
             $_ENV['APP_ENV'] = $this->appEnv;
 
         return $this;
@@ -69,6 +69,7 @@ final class Main{
         //@ini_set('session.cache_expire', 180);
         //@ini_set('session.use_cookies', 1);
         //@ini_set('session.auto_start', 0);
+        //@ini_set('log_errors', 1);
         @ini_set('display_errors', APP_DEBUG);
 
         //date_default_timezone_set('Asia/Shanghai');
@@ -115,13 +116,13 @@ final class Main{
             }
 
             //warning
-            if (E_WARNING == $errno){
-                \Strawframework\Base\Log::getInstance()->setType('mongodb')->warning('SERVER WARNING', $errno, $errstr, $errfile, $errline);
-                return new Result(Code::SERVER_ERROR, $errstr, [
-                    '_error_level' => 'Server Warning!',
-                    '_error_file' => $errfile . '; Line: ' . $errline
-                ]);
-            }
+            //if (E_WARNING == $errno){
+            //    \Strawframework\Base\Log::getInstance()->setType('mongodb')->warning('SERVER WARNING', $errno, $errstr, $errfile, $errline);
+            //    return new Result(Code::SERVER_ERROR, $errstr, [
+            //        '_error_level' => 'Server Warning!',
+            //        '_error_file' => $errfile . '; Line: ' . $errline
+            //    ]);
+            //}
             //var_dump($errno, $errstr, $errfile);
             return true;
         }, E_ALL & ~ E_NOTICE);

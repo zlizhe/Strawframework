@@ -106,7 +106,7 @@ class RequestObject{
         if (true == APP_DEBUG){
             unset($_REQUEST);
 
-            $diffParams = array_diff(array_keys($params), array_keys(get_object_vars($this)));
+            $diffParams = array_diff(array_keys($params), array_column($requests, 'name'));
             if (!empty($diffParams)){
                 throw new \Exception(sprintf('Params %s not in Ro. This message just show on APP_DEBUG.', implode(',', $diffParams)));
             }
